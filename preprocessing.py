@@ -37,9 +37,10 @@ for i,path in enumerate(images_path):
     for (x,y,w,h) in faces:
         cv.rectangle(img, (x, y), (x + w, y + h),(0,255,0), 2)
 
-
-    #img = cv.circle(img, (points[31]), 2, (255, 0, 0), 1)
-    #img = cv.circle(img, (points[36]), 2, (255, 0, 0), 1)
+    
+    img = cv.circle(img, (points[31]), 2, (255, 0, 0), 1)
+    img = cv.circle(img, (points[36]), 2, (255, 0, 0), 1)
+    img = cv.rotate()
     for x,y in points:
         img = cv.circle(img, (x,y), 2, (255, 0, 0), 1)
     
