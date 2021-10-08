@@ -20,36 +20,20 @@ cascPatheye = os.path.dirname(
 face_cascade=cv2.CascadeClassifier(cascPathface)
 eye_cascade=cv2.CascadeClassifier(cascPatheye)
 
-#img = cv2.imread('emily.jpg')
 
 
 for i,path in enumerate(images_path):
 
     img = cv2.imread(FGnet_path+path)
-    # Converting the image into grayscale
-    gray=cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # Creating variable faces
-    faces= face_cascade.detectMultiScale (gray, 1.1, 4)
-    # Defining and drawing the rectangle around the face
-    for(x , y,  w,  h) in faces:
-        cv2.rectangle(img, (x,y) ,(x+w, y+h), (0,255,0), 3)
-
-    roi_gray=gray[y:(y+h), x:(x+w)]
-    roi_color=img[y:(y+h), x:(x+w)]
 
     points = np.loadtxt(FGnet_points_path+imagePoints_path[i],comments=("version:", "n_points:", "{", "}"))
     points = points.astype('int32')
 
-
-    
-
     # Calculating coordinates of a central points of the rectangles
-    #left_eye_center = (int(left_eye[0] + (left_eye[2] / 2)), int(left_eye[1] + (left_eye[3] / 2)))
     left_eye_center = points[31]
     left_eye_x = left_eye_center[0] 
     left_eye_y = left_eye_center[1]
 
-    #right_eye_center = (int(right_eye[0] + (right_eye[2]/2)), int(right_eye[1] + (right_eye[3]/2)))
     right_eye_center = points[36]
     right_eye_x = right_eye_center[0]
     right_eye_y = right_eye_center[1]
@@ -57,6 +41,7 @@ for i,path in enumerate(images_path):
     img = cv2.circle(img, left_eye_center, 2, (255, 0, 0), 2)
     img = cv2.circle(img, right_eye_center, 2, (255, 0, 0), 2)
     img = cv2.line(img,left_eye_center,right_eye_center,(0, 0, 255),1)
+
 
     if left_eye_y > right_eye_y:
         A = (right_eye_x, left_eye_y)
@@ -85,6 +70,13 @@ for i,path in enumerate(images_path):
     # Applying the rotation to our image using the
     # cv2.warpAffine method
     rotated = cv2.warpAffine(img, M, (w, h))
+
+    gray = cv2.cvtColor(rotated, cv2.COLOR_BGR2GRAY)
+
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    for (x,y,w,h) in faces:
+        cv2.rectangle(rotated,(x,y),(x+w,y+h),(255,0,0),2)
+
 
     numpy_horizontal = np.hstack((img, rotated))
 
