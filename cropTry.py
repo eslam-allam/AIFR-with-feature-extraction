@@ -2,7 +2,7 @@
 import cv2 
 import numpy as np
 import os
-
+import matplotlib.pyplot as plt
 
 FGnet_path = './datasets/FGNET/images/'
 FGnet_points_path = './datasets/FGNET/points/'
@@ -98,14 +98,20 @@ for i,path in enumerate(images_path):
         print(resized.shape)
         #tempAfterEq = cv2.equalizeHist(temp)
 
-        cv2.imshow("face",resized)
-        cv2.imwrite('face.jpg', resized)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #cv2.imshow("face",resized)
+        #cv2.imwrite('face.jpg', resized)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
 
 
     #numpy_horizontal = np.hstack((temp, resized))
     #print(resized.shape)
+    #cv2.imshow("img",rotated)
+    f, axarr = plt.subplots(2)
+    
+    axarr[0].imshow(rotated)
+    axarr[1].imshow(resized)
+    plt.show()
     #cv2.imshow("img",numpy_horizontal)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
