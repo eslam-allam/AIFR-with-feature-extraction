@@ -2,7 +2,7 @@
 import cv2 
 import numpy as np
 import os
-
+import matplotlib.pyplot as plt
 
 FGnet_path = './datasets/FGNET/images/'
 FGnet_points_path = './datasets/FGNET/points/'
@@ -38,10 +38,13 @@ for i,path in enumerate(images_path):
     right_eye_x = right_eye_center[0]
     right_eye_y = right_eye_center[1]
 
-    img = cv2.circle(img, left_eye_center, 2, (255, 0, 0), 2)
-    img = cv2.circle(img, right_eye_center, 2, (255, 0, 0), 2)
-    img = cv2.line(img,left_eye_center,right_eye_center,(0, 0, 255),1)
 
+    #for x,y in points:
+    #    img = cv2.circle(img, (x,y), 2, (255, 0, 0), 1)
+    #chin ??
+    chin = points[7]
+    chinx = chin[0]
+    chiny= chin[1]
 
     if left_eye_y > right_eye_y:
         A = (right_eye_x, left_eye_y)
@@ -75,11 +78,22 @@ for i,path in enumerate(images_path):
 
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
     for (x,y,w,h) in faces:
-        cv2.rectangle(rotated,(x,y),(x+w,y+h),(255,0,0),2)
+        gray = gray[y:chiny, x:x + w]
+
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        equ = clahe.apply(gray)
+
+        dim = (224, 224)
+        resized = cv2.resize(equ, dim, interpolation = cv2.INTER_AREA)
+        
+        print(resized.shape)
 
 
-    numpy_horizontal = np.hstack((img, rotated))
+    f, axarr = plt.subplots(2)
+    
+    axarr[0].imshow(rotated,cmap='gray')
+    axarr[1].imshow(resized,cmap='gray')
+    plt.show()
 
-    cv2.imshow("img",numpy_horizontal)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
