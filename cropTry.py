@@ -1,10 +1,12 @@
-# Necessary imports
+from itertools import count
 import cv2 
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from PIL import Image
 
 FGnet_path = './datasets/FGNET/images/'
+newPath ='./datasets/FGNET/newImages/'
 FGnet_points_path = './datasets/FGNET/points/'
 
 images_path = os.listdir(FGnet_path)
@@ -20,12 +22,13 @@ cascPatheye = os.path.dirname(
 face_cascade=cv2.CascadeClassifier(cascPathface)
 eye_cascade=cv2.CascadeClassifier(cascPatheye)
 
-
-
+counter = 0
+ess = []
+allFacesRotated = []
 for i,path in enumerate(images_path):
-
+    
     img = cv2.imread(FGnet_path+path)
-
+    
     points = np.loadtxt(FGnet_points_path+imagePoints_path[i],comments=("version:", "n_points:", "{", "}"))
     points = points.astype('int32')
 
@@ -38,18 +41,13 @@ for i,path in enumerate(images_path):
     right_eye_x = right_eye_center[0]
     right_eye_y = right_eye_center[1]
 
-    img = cv2.circle(img, left_eye_center, 2, (255, 0, 0), 2)
-    img = cv2.circle(img, right_eye_center, 2, (255, 0, 0), 2)
-    img = cv2.line(img,left_eye_center,right_eye_center,(0, 0, 255),1)
+   
 
-    #for x,y in points:
-    #    img = cv2.circle(img, (x,y), 2, (255, 0, 0), 1)
-    #chin ??
+    
     chin = points[7]
     chinx = chin[0]
     chiny= chin[1]
-    img = cv2.circle(img, (chinx,chiny), 2, (255, 0, 0), 1)
-
+   
     if left_eye_y > right_eye_y:
         A = (right_eye_x, left_eye_y)
         # Integer -1 indicates that the image will rotate in the clockwise direction
@@ -78,40 +76,55 @@ for i,path in enumerate(images_path):
     # cv2.warpAffine method
     rotated = cv2.warpAffine(img, M, (w, h))
 
+
+    
+    allFacesRotated.append(rotated)
     gray = cv2.cvtColor(rotated, cv2.COLOR_BGR2GRAY)
 
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-    for (x,y,w,h) in faces:
-        cv2.rectangle(rotated,(x,y),(x+w,y+h),(255,0,0),2)
-        temp = rotated[y:chiny, x:x + w]
-
-        R, G, B = cv2.split(temp)
-
-        output1_R = cv2.equalizeHist(R)
-        output1_G = cv2.equalizeHist(G)
-        output1_B = cv2.equalizeHist(B)
-
-        equ = cv2.merge((output1_R, output1_G, output1_B))
-        dim = (224, 224)
-        resized = cv2.resize(equ, dim, interpolation = cv2.INTER_AREA)
-        #print("hi")
-        print(resized.shape)
-        #tempAfterEq = cv2.equalizeHist(temp)
-
-        #cv2.imshow("face",resized)
-        #cv2.imwrite('face.jpg', resized)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
-
-
-    #numpy_horizontal = np.hstack((temp, resized))
-    #print(resized.shape)
-    #cv2.imshow("img",rotated)
-    f, axarr = plt.subplots(2)
     
-    axarr[0].imshow(rotated)
-    axarr[1].imshow(resized)
-    plt.show()
-    #cv2.imshow("img",numpy_horizontal)
+    right = points[0][0]
+    left = points[0][0]
+    up = points[0][1]
+    down = points[0][1]
+    for x in range(64):
+        if(right<points[x][0]):
+            right = points[x][0]
+        if(left>points[x][0]):
+            left = points[x][0]
+        if(up>points[x][1]):
+            up = points[x][1]
+        if(down<points[x][1]):
+            down = points[x][1]
+    #print(faces)
+    if(faces == ()):
+        
+            
+        gray = gray[up-50:down, left:right]
+        counter = counter + 1
+        
+    else:
+        for (x,y,w,h) in faces:
+            counter = counter + 1
+        
+            cv2.rectangle(rotated,(x,y),(x+w,y+h),(255,0,0),2)
+        
+            gray = gray[y:down, left:right]
+     
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    equ = clahe.apply(gray)
+    dim = (224, 224)
+    resized = cv2.resize(equ, dim, interpolation = cv2.INTER_AREA)
+    print(resized.shape)
+
+
+    print(type(resized))
+    im = Image.fromarray(resized)
+    newName = path.split("A")
+    
+    im.save(newPath+path)
+    cv2.imshow('img',resized) #remove if u want to save all imgs
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    
+   
