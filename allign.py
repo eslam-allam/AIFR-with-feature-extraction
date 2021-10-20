@@ -10,13 +10,13 @@ from pathlib import Path
 
 
 
-def hisEqulColor(img):
+'''def hisEqulColor(img):
     ycrcb=cv2.cvtColor(img,cv2.COLOR_BGR2YCR_CB)
     channels=cv2.split(ycrcb)
     cv2.equalizeHist(channels[0],channels[0])
     cv2.merge(channels,ycrcb)
     cv2.cvtColor(ycrcb,cv2.COLOR_YCR_CB2RGB,img)
-    return img
+    return img'''
 
 
 
@@ -97,9 +97,9 @@ for i,path in enumerate(images_path):
 
     
     allFacesRotated.append(rotated)
-    #gray = cv2.cvtColor(rotated, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(rotated, cv2.COLOR_BGR2GRAY)
 
-    faces = face_cascade.detectMultiScale(rotated, 1.3, 5)
+    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
     
     right = points[0][0]
     left = points[0][0]
@@ -118,7 +118,7 @@ for i,path in enumerate(images_path):
     if(faces == ()):
         
             
-        rotated = rotated[up-50:down, left:right]
+        gray = gray[up-50:down, left:right]
         counter = counter + 1
         
     else:
@@ -126,10 +126,10 @@ for i,path in enumerate(images_path):
             counter = counter + 1
         
         
-            rotated = rotated[y:down, left:right]
-     
+            gray = gray[y:down, left:right]
+
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    equ = hisEqulColor(rotated)
+    equ = cv2.equalizeHist(gray)
     dim = (224, 224)
     resized = cv2.resize(equ, dim, interpolation = cv2.INTER_AREA)
     print(resized.shape)

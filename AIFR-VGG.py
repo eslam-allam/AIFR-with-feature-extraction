@@ -20,7 +20,7 @@ import os
 import cv2 
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-import matlab.engine
+
 
 
 image_directory = './datasets/FGNET/newImages/'
@@ -32,36 +32,23 @@ labels = np.arange(1002)
 #fill image and label arrays
 for i,image in enumerate(image_list):
     temp_image = cv2.imread(image_directory+image)
-    temp_image = cv2.cvtColor(temp_image,cv2.COLOR_BGR2RGB)
     images_array[i] = temp_image
     label = int(image[0:3])-1
     labels[i] = label
-
-# display some of the images
-'''fig, ax = plt.subplots(nrows=10, ncols=10,sharex=True,sharey=True,figsize=(15,15))
-i = 0
-for row in ax:
-    for col in row:
-        col.imshow(images_array[i])
-        col.title.set_text(str(labels[i]))
-        i += 1
-        
-
-plt.show()'''
-
-
 
 
 # split the data into train and test
 X_train, X_test, y_train1, y_test1 = train_test_split(images_array, labels, test_size=0.20, random_state=33)
 
 
+numClasses = 82
+
 y_train = tf.keras.utils.to_categorical(
-    y_train1, num_classes=82, dtype='float32'
+    y_train1, num_classes=numClasses, dtype='float32'
 )
 
 y_test = tf.keras.utils.to_categorical(
-    y_test1, num_classes=82, dtype='float32'
+    y_test1, num_classes=numClasses, dtype='float32'
 )
 
 X_train = preprocess_input(X_train)
@@ -137,6 +124,5 @@ print("fusion 3 Done")
 print("vector 1 shape: ",fused_vector1.shape)
 print("vector 2 shape: ",fused_vector2.shape)
 print("vector 3 shape: ",fused_vector3.shape)
-
 
 # %%
