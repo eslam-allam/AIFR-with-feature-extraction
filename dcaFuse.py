@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from numpy import linalg as LA
 from scipy.linalg import fractional_matrix_power, svd
+from sklearn import preprocessing
 
 
 
@@ -61,8 +62,9 @@ def dcaFuse(X, Y, L):
     q = Y.shape[0]
 
     # Normalize
-    X = (X - np.tile(np.mean(X, axis=1, dtype=np.float64).reshape([p,1]), n)) / np.tile(np.std(X, axis=1, dtype=np.float64).reshape([p,1]), n)
-    Y = (Y - np.tile(np.mean(Y, axis=1, dtype=np.float64).reshape([q,1]), n)) / np.tile(np.std(Y, axis=1, dtype=np.float64).reshape([q,1]), n)
+    X = preprocessing.normalize(X)
+    Y = preprocessing.normalize(Y)
+
 
     classes = np.unique(L)
     c = len(classes)
