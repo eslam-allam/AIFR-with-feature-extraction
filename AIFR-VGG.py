@@ -20,6 +20,8 @@ import os
 import cv2 
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+import matlab.engine
+
 
 image_directory = './datasets/FGNET/newImages/'
 image_list = os.listdir(image_directory)
@@ -96,6 +98,7 @@ model.fit(X_train, y_train, epochs=50,batch_size=56, callbacks=[es],validation_d
 
 
 #%%
+
 m1 = Model(inputs=model.input, outputs=model.get_layer('fc1').output)
 fc1 = m1.predict(X_train)
 
@@ -113,15 +116,27 @@ print("vector 1 shape :", flatten.shape)
 print("vector 2 shape :", fc1.shape)
 print("vector 3 shape :", fc2.shape)
 print("Labels shape: ", y_train1.shape)
+
 #%%
 Xs, Ys, Ax, Ay= dcaFuse(fc1,flatten,y_train1)
 fused_vector1 = np.add(Xs, Ys)
 
+print("fusion 1 Done")
+
 Xs, Ys, Ax, Ay= dcaFuse(fc1,fc2,y_train1)
 fused_vector2 = np.add(Xs, Ys)
 
+print("fusion 2 Done")
+
 Xs, Ys, Ax, Ay = dcaFuse(fused_vector1, fused_vector2, y_train1)
 fused_vector3 = np.add(Xs, Ys)
+
+print("fusion 3 Done")
+
+
+print("vector 1 shape: ",fused_vector1.shape)
+print("vector 2 shape: ",fused_vector2.shape)
+print("vector 3 shape: ",fused_vector3.shape)
 
 
 # %%
