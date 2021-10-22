@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from keras_vggface.vggface import VGGFace
 from tensorflow.keras import regularizers
+import pickle
 
 
 
@@ -97,7 +98,7 @@ m1 = Model(inputs=model.input, outputs=model.get_layer('fc1').output)
 fc1_train = m1.predict(X_train)
 fc1_test = m1.predict(X_test)
 
-m1 = Model(inputs=model.input, outputs=model.get_layer('fc2').output)
+m2 = Model(inputs=model.input, outputs=model.get_layer('fc2').output)
 fc2_train = m1.predict(X_train)
 fc2_test = m1.predict(X_test)
 
@@ -132,7 +133,7 @@ test_vector = test_vector.T
 
 
 from sklearn.neighbors import KNeighborsClassifier
-classifier = KNeighborsClassifier(n_neighbors=1)
+classifier = KNeighborsClassifier(n_neighbors=2)
 classifier.fit(fused_vector,y_train1)
 predicted = classifier.predict(test_vector)
 
@@ -141,5 +142,16 @@ from sklearn import metrics
 print("Accuracy:",metrics.accuracy_score(y_test1, predicted))
 
 #check the dcaFuse mat file sample use cuz u fcked up dog
+
+# %%
+with open('./saved_models/model1/KNN_model', 'wb') as f:
+    pickle.dump(classifier, f) 
+np.save('./saved_models/model1/Atransform',Ax)                     
+np.save('./saved_models/model1/Ytransform',Ay)      
+m1.save('./saved_models/model1/fc1_model')
+m2.save('./saved_models/model1/fc2_model')
+
+
+
 
 # %%
