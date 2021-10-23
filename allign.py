@@ -40,9 +40,12 @@ cascPatheye = os.path.dirname(
 face_cascade=cv2.CascadeClassifier(cascPathface)
 eye_cascade=cv2.CascadeClassifier(cascPatheye)
 
+
+#should be deleted i think
 counter = 0
 ess = []
 allFacesRotated = []
+#############################
 for i,path in enumerate(images_path):
     
     img = cv2.imread(FGnet_path+path)
@@ -61,11 +64,15 @@ for i,path in enumerate(images_path):
 
    
 
-    
+    #should be deleted i think
     chin = points[7]
     chinx = chin[0]
     chiny= chin[1]
-   
+    ######################
+
+
+
+    #should be deleted i think v2
     if left_eye_y > right_eye_y:
         A = (right_eye_x, left_eye_y)
         # Integer -1 indicates that the image will rotate in the clockwise direction
@@ -75,6 +82,7 @@ for i,path in enumerate(images_path):
         # Integer 1 indicates that image will rotate in the counter clockwise  
         # direction
         direction = 1 
+    ######################
 
 
     delta_x = right_eye_x - left_eye_x
@@ -95,8 +103,10 @@ for i,path in enumerate(images_path):
     rotated = cv2.warpAffine(img, M, (w, h))
 
 
-    
+    #should be deleted i think
     allFacesRotated.append(rotated)
+    ########################################
+
     gray = cv2.cvtColor(rotated, cv2.COLOR_BGR2GRAY)
 
     faces = face_cascade.detectMultiScale(gray, 1.3, 5)
@@ -128,16 +138,22 @@ for i,path in enumerate(images_path):
         
             gray = gray[y:down, left:right]
 
+    # are we using clahe ??? doesn't have .apply 
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    ################ 
+
     equ = cv2.equalizeHist(gray)
     dim = (224, 224)
     resized = cv2.resize(equ, dim, interpolation = cv2.INTER_AREA)
-    print(resized.shape)
+    #print(resized.shape) should be deleted
 
 
 
     im = Image.fromarray(resized)
+    
+    #should be deleted
     newName = path.split("A")
+    ####################
     
 
     im.save(newPath+path)
