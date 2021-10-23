@@ -21,8 +21,21 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from keras_vggface.vggface import VGGFace
 from tensorflow.keras import regularizers
+from tensorflow.keras.callbacks import LearningRateScheduler
+
 import pickle
 
+def lr_schedule(epoch):
+    lrate = 0.001
+    if epoch > 5:
+        lrate = 0.0005
+    if epoch > 15:
+        lrate = 0.0003
+    if epoch > 20:
+        lrate = 0.0001
+    if epoch > 25:
+        lrate = 0.00005
+    return lrate
 
 
 
@@ -43,6 +56,8 @@ for i,image in enumerate(image_list):
 # split the data into train and test
 X_train, X_test, y_train1, y_test1 = train_test_split(images_array, labels, test_size=0.20, random_state=33)
 
+# freeing memory
+del labels, temp_image, images_array, label, image, image_directory, image_list,
 
 numClasses = 82
 
@@ -72,11 +87,12 @@ base_model.trainable = False ## Not trainable weights
 x = base_model.layers[-1].output 
 dense1 = Dense(4096, activation = "relu",name='fc1',kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4))(x)
 dense2 = Dense(4096,activation='relu',name='fc2',kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4))(dense1)
-drop = Dropout(0.2)(dense2)
+drop = Dropout(0.3)(dense2)
 predictions = Dense(82,activation='softmax')(drop)
 model = Model(inputs = base_model.input, outputs = predictions)
 
-
+# freeing memory
+del base_model
 
 
 model.summary()
@@ -86,9 +102,11 @@ model.compile(
     metrics=['accuracy'],
 )
 #%%
-es = EarlyStopping(monitor='val_accuracy', mode='max', patience=5,  restore_best_weights=True)
-
-model.fit(X_train, y_train, epochs=50,batch_size=32, callbacks=[es],validation_data=(X_test,y_test))
+es = EarlyStopping(monitor='val_accuracy', mode='max', patience=15,  restore_best_weights=True)
+steps = int(X_train.shape[0] / 32)
+model.fit(X_train, y_train, epochs=50,batch_size=32, 
+callbacks=[es,LearningRateScheduler(lr_schedule)],
+validation_split=0.2,steps_per_epoch=steps, use_multiprocessing=True)
 
 
 
@@ -102,11 +120,19 @@ m2 = Model(inputs=model.input, outputs=model.get_layer('fc2').output)
 fc2_train = m1.predict(X_train)
 fc2_test = m1.predict(X_test)
 
+pooling = Model(inputs=model.input, outputs=model.get_layer('global_average_pooling2d').output)
+pooling_train = pooling.predict(X_train)
+pooling_test = pooling.predict(X_test)
+
+
 fc1_train = fc1_train.T
 fc2_train = fc2_train.T
 
 fc1_test = fc1_test.T
 fc2_test = fc2_test.T
+
+pooling_train = pooling_train.T
+pooling_test = pooling_test.T
 #%%
 print("vector 1 shape :", fc1_train.shape)
 print("vector 2 shape :", fc2_train.shape)
@@ -115,41 +141,76 @@ print("Labels shape: ", y_train1.shape)
 #%%
 
 
-Xs, Ys, Ax, Ay= dcaFuse(fc1_train,fc2_train,y_train1)
-fused_vector = np.concatenate((Xs, Ys))
+Xs, Ys, Ax1, Ay1= dcaFuse(fc1_train,fc2_train,y_train1)
+fused_vector1 = np.concatenate((Xs, Ys))
 
-testX = np.matmul(Ax,fc1_test)
-testY = np.matmul(Ay, fc2_test)
-test_vector = np.concatenate((testX,testY))
+testX = np.matmul(Ax1,fc1_test)
+testY = np.matmul(Ay1, fc2_test)
+test_vector1 = np.concatenate((testX,testY))
+
+print("fused_vector1: ",fused_vector1.shape)
+print("test_vector1: ",test_vector1.shape)
+
+
+Xs, Ys, Ax2, Ay2= dcaFuse(fc1_train,pooling_train,y_train1)
+fused_vector2 = np.concatenate((Xs, Ys))
+
+testX = np.matmul(Ax2,fc1_test)
+testY = np.matmul(Ay2, pooling_test)
+test_vector2 = np.concatenate((testX,testY))
+
+print("fused_vector2: ",fused_vector2.shape)
+print("test_vector2: ",test_vector2.shape)
+
+Xs, Ys, Ax3, Ay3= dcaFuse(fused_vector2,fused_vector2,y_train1)
+fused_vector3 = np.concatenate((Xs, Ys))
+
+print("fused_vector3: ",fused_vector3.shape)
+
+testX = np.matmul(Ax3,test_vector1)
+testY = np.matmul(Ay3, test_vector2)
+test_vector3 = np.concatenate((testX,testY))
 
 print("fusion Done")
-print("fused_vector shape: ",fused_vector.shape)
-print("test_vector shape: ",test_vector.shape)
+print("fused_vector shape: ",fused_vector3.shape)
+print("test_vector shape: ",test_vector3.shape)
+
+# freeing memory
+del fused_vector1, fused_vector2, test_vector1, test_vector2, fc1_train,
+fc2_train, pooling_train, fc1_test, fc2_test, pooling_test
 
 #%%
 
-fused_vector = fused_vector.T
-test_vector = test_vector.T
+fused_vector = fused_vector3.T
+test_vector = test_vector3.T
 
 
 from sklearn.neighbors import KNeighborsClassifier
-classifier = KNeighborsClassifier(n_neighbors=2)
+classifier = KNeighborsClassifier(n_neighbors=1)
 classifier.fit(fused_vector,y_train1)
 predicted = classifier.predict(test_vector)
 
+
 from sklearn import metrics
 # Model Accuracy, how often is the classifier correct?
-print("Accuracy:",metrics.accuracy_score(y_test1, predicted))
+print("DCA Accuracy:",metrics.accuracy_score(y_test1, predicted))
 
-#check the dcaFuse mat file sample use cuz u fcked up dog
+predicted = np.argmax(model.predict(X_test), axis=-1)
+print("DNN Accuracy:",metrics.accuracy_score(y_test1, predicted))
+
 
 # %%
-with open('./saved_models/model1/KNN_model', 'wb') as f:
+with open('./saved_models/model2/KNN_model', 'wb') as f:
     pickle.dump(classifier, f) 
-np.save('./saved_models/model1/Atransform',Ax)                     
-np.save('./saved_models/model1/Ytransform',Ay)      
-m1.save('./saved_models/model1/fc1_model')
-m2.save('./saved_models/model1/fc2_model')
+np.save('./saved_models/model2/Atransform1',Ax1)                     
+np.save('./saved_models/model2/Ytransform1',Ay1)
+np.save('./saved_models/model2/Atransform2',Ax2)                     
+np.save('./saved_models/model2/Ytransform2',Ay2)      
+np.save('./saved_models/model2/Atransform3',Ax3)                     
+np.save('./saved_models/model2/Ytransform3',Ay3)            
+m1.save('./saved_models/model2/fc1_model.h5')
+m2.save('./saved_models/model2/fc2_model.h5')
+pooling.save('./saved_models/model2/pooling_model.h5')
 
 
 
