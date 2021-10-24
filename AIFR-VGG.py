@@ -3,6 +3,7 @@ import tensorflow as tf
 from tensorflow.keras.applications.vgg16 import preprocess_input
 from keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
+from keras_vggface import utils
 
 import keras
 import graphviz
@@ -68,9 +69,11 @@ y_train = tf.keras.utils.to_categorical(
 y_test = tf.keras.utils.to_categorical(
     y_test1, num_classes=numClasses, dtype='float32'
 )
+X_train = X_train.astype('float32')
+X_test = X_test.astype('float32')
 
-X_train = preprocess_input(X_train)
-X_test = preprocess_input(X_test)
+X_train = utils.preprocess_input(X_train,version=2)
+X_test = utils.preprocess_input(X_test,version=2)
 
 print(X_train.shape)
 print(y_train.shape)
@@ -80,11 +83,11 @@ print(y_train.shape)
 
 
 #%%
-base_model = VGGFace(model='resnet50', include_top=False, input_shape=(224, 224, 3), pooling='avg')
+base_model = VGGFace(model='senet50', include_top=True, input_shape=(224, 224, 3), pooling='avg')
 base_model.trainable = False ## Not trainable weights
 
 
-x = base_model.layers[-1].output 
+x = base_model.layers[-2].output 
 dense1 = Dense(4096, activation = "relu",name='fc1',kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4))(x)
 dense2 = Dense(4096,activation='relu',name='fc2',kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4))(dense1)
 drop = Dropout(0.3)(dense2)
@@ -120,7 +123,7 @@ m2 = Model(inputs=model.input, outputs=model.get_layer('fc2').output)
 fc2_train = m1.predict(X_train)
 fc2_test = m1.predict(X_test)
 
-pooling = Model(inputs=model.input, outputs=model.get_layer('global_average_pooling2d').output)
+pooling = Model(inputs=model.input, outputs=model.get_layer('flatten').output)
 pooling_train = pooling.predict(X_train)
 pooling_test = pooling.predict(X_test)
 
@@ -186,7 +189,7 @@ test_vector = test_vector3.T
 
 
 from sklearn.neighbors import KNeighborsClassifier
-classifier = KNeighborsClassifier(n_neighbors=1)
+classifier = KNeighborsClassifier(n_neighbors=5)
 classifier.fit(fused_vector,y_train1)
 predicted = classifier.predict(test_vector)
 
@@ -200,17 +203,17 @@ print("DNN Accuracy:",metrics.accuracy_score(y_test1, predicted))
 
 
 # %%
-with open('./saved_models/model2/KNN_model', 'wb') as f:
+with open('./saved_models/model3/KNN_model', 'wb') as f:
     pickle.dump(classifier, f) 
-np.save('./saved_models/model2/Atransform1',Ax1)                     
-np.save('./saved_models/model2/Ytransform1',Ay1)
-np.save('./saved_models/model2/Atransform2',Ax2)                     
-np.save('./saved_models/model2/Ytransform2',Ay2)      
-np.save('./saved_models/model2/Atransform3',Ax3)                     
-np.save('./saved_models/model2/Ytransform3',Ay3)            
-m1.save('./saved_models/model2/fc1_model.h5')
-m2.save('./saved_models/model2/fc2_model.h5')
-pooling.save('./saved_models/model2/pooling_model.h5')
+np.save('./saved_models/model3/Atransform1',Ax1)                     
+np.save('./saved_models/model3/Ytransform1',Ay1)
+np.save('./saved_models/model3/Atransform2',Ax2)                     
+np.save('./saved_models/model3/Ytransform2',Ay2)      
+np.save('./saved_models/model3/Atransform3',Ax3)                     
+np.save('./saved_models/model3/Ytransform3',Ay3)            
+m1.save('./saved_models/model3/fc1_model.h5')
+m2.save('./saved_models/model3/fc2_model.h5')
+pooling.save('./saved_models/model3/pooling_model.h5')
 
 
 
