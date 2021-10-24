@@ -7,7 +7,9 @@ import os
 import cv2
 from keras_vggface import utils
 import matplotlib.pyplot as plt
-#%matplotlib inline
+import matplotlib.gridspec as gridspec
+
+%matplotlib inline
 
 
 
@@ -107,7 +109,6 @@ for i,image in enumerate(images_array[0:10]):
     matching_images_indicies = [i for i, x in enumerate(labels) if x == prediction]
     matching_images = [images_array[i] for i in matching_images_indicies]
     print("\n----------------\nInput Image: True Class = {}".format(label))
-    plt.imshow(image)
     
 
     print("Matching Images: Predicted Class = {}\n----------------".format(prediction))
@@ -124,14 +125,39 @@ for i,image in enumerate(images_array[0:10]):
             rows +=1
         
         if rows_enough == True: break
+    
+    ratio = np.ones(rows+2,dtype='float32')
+    ratio[1] = 0.00001
 
-    fig, ax = plt.subplots(nrows=rows, ncols=columns)
-    z = 0
-    for row in ax:
-        for col in row:
-            col.imshow(images_array[z])
-            z += 1
-    plt.tight_layout()
+
+    fig = plt.figure(tight_layout=True,figsize=(40,40))
+    gs = gridspec.GridSpec(rows+2, columns,height_ratios=ratio)
+    ax = fig.add_subplot(gs[0, :])
+    ax.axes.get_xaxis().set_visible(False)
+    ax.axes.get_yaxis().set_visible(False)
+    ax.set_title('INPUT IMAGE: True Class:{}'.format(label),fontsize=80)
+    ax.imshow(image)
+
+    ax = fig.add_subplot(gs[1, :])
+    ax.axes.get_xaxis().set_visible(False)
+    ax.axes.get_yaxis().set_visible(False)
+    ax.set_title("MATCHING IMAGES: Predicted Class:{}".format(prediction),fontsize=80)
+
+
+    
+    count = 0
+    
+    for row in range(2,rows):
+        for col in range(columns):
+            ax = fig.add_subplot(gs[row, col])
+            ax.axes.get_xaxis().set_visible(False)
+            ax.axes.get_yaxis().set_visible(False)
+            ax.imshow(matching_images[count])
+            count += 1
+
+    fig.align_labels()
+    
+    
     plt.show()
 
 
