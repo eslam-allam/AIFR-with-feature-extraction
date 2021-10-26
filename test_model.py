@@ -8,12 +8,17 @@ import cv2
 from keras_vggface import utils
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import sys
 
-%matplotlib inline
+#%matplotlib inline
+
+def handle(event):
+    if event.key == 'r':
+        sys.exit(0)
 
 
 
-tf.autograph.set_verbosity(0)
+tf.get_logger().setLevel('INFO')
 
 # shuffle images and labels in the exact same way
 def unison_shuffled_copies(a, b):
@@ -102,62 +107,63 @@ print("Accuracy:",metrics.accuracy_score(labels, predicted))
 
 
 #%%
+import math
 matching_images = []
-for i,image in enumerate(images_array[0:10]):
+
+# make sure to replace images_array in the for loop with images_array[0:10] or any slice you want if you are using an interactive 
+#shell to avoid overloading your system!!!!!!!!!!!
+#you can skip image by pressing 'q' or exit by pressing 'r'
+
+for i,image in enumerate(images_array):
     label = labels[i]
     prediction = predicted[i]
     matching_images_indicies = [i for i, x in enumerate(labels) if x == prediction]
     matching_images = [images_array[i] for i in matching_images_indicies]
-    print("\n----------------\nInput Image: True Class = {}".format(label))
-    
-
-    print("Matching Images: Predicted Class = {}\n----------------".format(prediction))
-    columns = 4
-    rows = 1
     nb_matches = len(matching_images)
-
     
-    while True:
-        rows_enough = True
-
-        if rows < nb_matches/columns:
-            rows_enough = False
-            rows +=1
-        
-        if rows_enough == True: break
+    
+    columns = 4
+    rows = nb_matches/float(columns)
+    rows = math.ceil(rows)
+    
     
     ratio = np.ones(rows+2,dtype='float32')
     ratio[1] = 0.00001
 
 
-    fig = plt.figure(tight_layout=True,figsize=(40,40))
+    fig = plt.figure(1,tight_layout=True,figsize=(20,20))
     gs = gridspec.GridSpec(rows+2, columns,height_ratios=ratio)
     ax = fig.add_subplot(gs[0, :])
     ax.axes.get_xaxis().set_visible(False)
     ax.axes.get_yaxis().set_visible(False)
-    ax.set_title('INPUT IMAGE: True Class:{}'.format(label),fontsize=80)
+    ax.set_title('INPUT IMAGE: True Class:{}'.format(label),fontsize=20)
     ax.imshow(image)
 
     ax = fig.add_subplot(gs[1, :])
     ax.axes.get_xaxis().set_visible(False)
     ax.axes.get_yaxis().set_visible(False)
-    ax.set_title("MATCHING IMAGES: Predicted Class:{}".format(prediction),fontsize=80)
+    ax.set_title("MATCHING IMAGES: Predicted Class:{}".format(prediction),fontsize=20)
 
 
     
     count = 0
     
-    for row in range(2,rows):
+    for row in range(2,rows+2):
         for col in range(columns):
             ax = fig.add_subplot(gs[row, col])
             ax.axes.get_xaxis().set_visible(False)
             ax.axes.get_yaxis().set_visible(False)
             ax.imshow(matching_images[count])
             count += 1
+            if count == nb_matches:
+                break
 
     fig.align_labels()
-    
-    
+    fig.canvas.mpl_connect('key_press_event', handle)
+    mng = plt.get_current_fig_manager()
+
+    # comment the next line if you are using ipyKernel/jupyter notebook!(Interactive shell)
+    mng.window.state('zoomed')
     plt.show()
 
 
