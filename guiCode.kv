@@ -1,0 +1,80 @@
+WindowManager:
+    MainWindow:
+    SecondWindow:
+    thirdWindow:
+
+
+
+<MainWindow>:
+    name: "main"
+    BoxLayout:
+        orientation: "horizontal"
+        BoxLayout:
+            orientation: "vertical"
+            size_hint: (1, 0.9)
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+            Image:
+                size_hint: (0.9, 1)
+                pos_hint: {"center_x": 0.5}
+                source: 'guiImages/facial-recognition-connected-real-estate.png'
+            Label:
+                size_hint: (1, 0.1)
+                
+                text: "Age inavraint face recognition demo"
+            Label:
+                size_hint: (1, 0.1)
+                
+                text: "by us idk lol it's ugly"
+            Button:
+                text: "B"
+                size_hint: (0.8, 0.2)
+                pos_hint:{"center_x": 0.5}
+            
+            # u can use any of the instead of x
+            # x (starts from left), center_x(starts from cenetr), right (starts from right)
+            # y, center_y, top
+
+                #pos_hint: {"center_y": .5}
+        BoxLayout:
+            orientation: "vertical"
+            size_hint: (1, 0.8)
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+            spacing: "10dp"
+            Button:
+                text: "Display dataset images"
+                size_hint: (0.8, 0.9)
+                pos_hint:{"center_x": 0.5}
+                on_release: 
+                    app.root.current = "second"
+                    root.manager.transition.direction = 'left'
+            Button:
+                text: "Add new set of images"
+                size_hint: (0.8, 0.9)
+                pos_hint:{"center_x": 0.5}
+                on_release: 
+                    app.root.current = "third"
+                    root.manager.transition.direction = 'left'
+            Button:
+                text: "Re train the dnn"
+                size_hint: (0.8, 0.9)
+                pos_hint:{"center_x": 0.5}
+            Button:
+                text: "Run the dnn"
+                size_hint: (0.8, 0.9)
+                pos_hint:{"center_x": 0.5}
+            Button:
+                text: "Exit"
+                size_hint: (0.8, 0.9)
+                pos_hint:{"center_x": 0.5}
+        
+    
+
+<SecondWindow>:
+    name: "second"
+    
+    
+            
+
+
+<thirdWindow>:
+    name: "third"
