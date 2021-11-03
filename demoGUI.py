@@ -14,7 +14,7 @@ from kivy.uix.image import Image
 from kivy.core.window import Window
 
 from kivy.uix.scrollview import ScrollView
-
+import re
 
 import os
 import math
@@ -131,7 +131,11 @@ class thirdWindow(Screen):
 
     def upload(self, instance):
         path = filechooser.open_file(title="Pick a img file..")
-        csvPath = filechooser.open_file(title="Pick a csv file..")
+        
+        image_name = re.findall('\w+\.\w+',path[0])
+        image_name = image_name[0]
+        csvPath = re.sub(image_name[-4:],'.csv',path[0])
+        print(path,'\n',csvPath)
         addImgClass(path, csvPath)
 
 

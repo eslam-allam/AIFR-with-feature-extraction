@@ -11,6 +11,14 @@ cascPathface = os.path.dirname(cv2.__file__) + "/data/haarcascade_frontalface_al
 face_cascade = cv2.CascadeClassifier(cascPathface)
 
 annotation_index = 0
+def swap_if_greater(x,y):
+    if x > y:
+        temp = x
+        x = y
+        y = temp
+        return x,y
+    return x,y
+
 
 
 class addImgClass:
@@ -97,27 +105,48 @@ class addImgClass:
         data = {"X": x_vals, "Y": y_vals, "Annotation": annotation_vals}
 
         #%%
-
-        left_eye_x = x_vals[0]
-        left_eye_y = y_vals[0]
-
-        right_eye_x = x_vals[1]
-        right_eye_y = y_vals[1]
+        left_eye = [x_vals[0],y_vals[0]]
+        right_eye = [x_vals[1],y_vals[1]]
+        
 
         up = y_vals[2]
         down = y_vals[3]
         left = x_vals[4]
         right = x_vals[5]
 
+        #swap left and right eyes
+        if right_eye[0] > left_eye[0]:
+            temp = right_eye
+            right_eye =left_eye
+            left_eye = temp
+        
+        up, down = swap_if_greater(up,down)
+        right, left = swap_if_greater(right, left)
+
+        
+
+        left_eye_x = left_eye[0]
+        left_eye_y = left_eye[1]
+        right_eye_x = right_eye[0]
+        right_eye_y = right_eye[1]
+
+        
+
         if left_eye_y > right_eye_y:
             A = (right_eye_x, left_eye_y)
             # Integer -1 indicates that the image will rotate in the clockwise direction
             direction = -1
+            direction_text = 'COUNTER CLOCKWISE'
         else:
             A = (left_eye_x, right_eye_y)
             # Integer 1 indicates that image will rotate in the counter clockwise
             # direction
             direction = 1
+            direction_text = 'CLOCKWISE'
+
+        
+        
+        print("left eye: {}\nright eye: {}\nROTATING {}".format(left_eye,right_eye,direction_text))
 
         delta_x = right_eye_x - left_eye_x
         delta_y = right_eye_y - left_eye_y
@@ -142,7 +171,7 @@ class addImgClass:
 
         faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
-        gray = gray[up:down, left:right]
+        gray = gray[up:down, right:left]
 
         print("shape of gray: ", gray.shape)
         # are we using clahe ??? doesn't have .apply
