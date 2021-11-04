@@ -80,14 +80,16 @@ cv2.setMouseCallback('Image mouse', draw_circle)
 
 while True:
     # Show image 'Image mouse':
+    print('annotation index: {}'.format(annotation_index))
     cv2.imshow('Image mouse', image)
 
     # Continue until 'q' is pressed:
     if cv2.waitKey(20) & 0xFF == ord('q'):
+        
         break
     if annotation_index > 5:
         break
-
+cv2.destroyAllWindows()
 # Create a dictionary using lists
 data = {'X':x_vals,'Y':y_vals,'Annotation':annotation_vals}
 

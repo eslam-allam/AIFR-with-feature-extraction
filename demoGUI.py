@@ -124,19 +124,47 @@ class thirdWindow(Screen):
             spacing=(10, 10),
         )
 
+        toolBar = BoxLayout(orientation="horizontal")
+        toolBar.size_hint = (1, None)
+        toolBar.height = "60dp"
+
+
         uploadB = Button(text="upload")
         uploadB.bind(on_release=self.upload)
+        
+
+
+        backButton = Button(
+            size_hint=(None, None),
+            pos_hint={"x": 0, "center_y": 0.5},
+            width="100dp",
+            height="40dp",
+            text="go back",
+        )
+
+        backButton.bind(on_press=self.callback)
+        toolBar.add_widget(backButton)
+        box.add_widget(toolBar)
         box.add_widget(uploadB)
         self.add_widget(box)
 
     def upload(self, instance):
         path = filechooser.open_file(title="Pick a img file..")
+        if not path :
+            print("{}\nNO IMAGE CHOSEN!!!!\n{}".format('-'*10,'-'*10))
+            return False
         
         image_name = re.findall('\w+\.\w+',path[0])
         image_name = image_name[0]
         csvPath = re.sub(image_name[-4:],'.csv',path[0])
         print(path,'\n',csvPath)
         addImgClass(path, csvPath)
+    
+    def callback(self, instance):
+        print("Button is pressed")
+        print("The button % s state is <%s>" % (instance, instance.state))
+        self.manager.current = "main"
+        self.manager.transition.direction = "right"
 
 
 class WindowManager(ScreenManager):
