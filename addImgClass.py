@@ -13,9 +13,7 @@ cascPathface = os.path.dirname(cv2.__file__) + "/data/haarcascade_frontalface_al
 face_cascade = cv2.CascadeClassifier(cascPathface)
 
 
-
-
-def image_resize(image, width = None, height = None, inter = cv2.INTER_AREA):
+def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     # initialize the dimensions of the image to be resized and
     # grab the image size
     dim = None
@@ -41,24 +39,25 @@ def image_resize(image, width = None, height = None, inter = cv2.INTER_AREA):
         dim = (width, int(h * r))
 
     # resize the image
-    resized = cv2.resize(image, dim, interpolation = inter)
+    resized = cv2.resize(image, dim, interpolation=inter)
 
     # return the resized image
     return resized
 
 
-def swap_if_greater(x,y):
+def swap_if_greater(x, y):
     if x > y:
         temp = x
         x = y
         y = temp
-        return x,y
-    return x,y
+        return x, y
+    return x, y
+
 
 annotation_index = 0
 
+
 class addImgClass:
-    
     def __init__(self, imgPath, csvPath):
         global annotation_index
         annotation_index = 0
@@ -67,7 +66,7 @@ class addImgClass:
         print(imgPath)
         image = cv2.imread(imgPath[0])
 
-        image = image_resize(image,height=600)
+        image = image_resize(image, height=600)
         image3 = image.copy()
         print(image.shape)
 
@@ -89,7 +88,6 @@ class addImgClass:
 
         def draw_circle(event, x, y, flags, param):
             global annotation_index
-            
 
             if event == cv2.EVENT_LBUTTONDBLCLK:
                 # Annotate the image
@@ -128,11 +126,11 @@ class addImgClass:
         # We set the mouse callback function to 'draw_circle':
         cv2.setMouseCallback("Image mouse", draw_circle)
         try:
-            
+
             count = 0
             while True:
                 # Show image 'Image mouse':
-                
+
                 if count == 0:
                     cv2.imshow("Image mouse", image)
                     count = count + 1
@@ -147,55 +145,54 @@ class addImgClass:
                     cv2.imshow("Image mouse", image)
                     print("ANNOTATION INDEX MORE THAN 5 !!!!! QUITTING!!")
                     break
-            
-            if not x_vals: raise Exception('NO POINTS ANNOTATED!!!!!EXITING')
-            if len(x_vals) < 6 : raise Exception('NUMBER OF ANNOTATED POINTS < 6!!!!EXITING')
+
+            if not x_vals:
+                raise Exception("NO POINTS ANNOTATED!!!!!EXITING")
+            if len(x_vals) < 6:
+                raise Exception("NUMBER OF ANNOTATED POINTS < 6!!!!EXITING")
             # Create a dictionary using lists
             data = {"X": x_vals, "Y": y_vals, "Annotation": annotation_vals}
 
             #%%
-            left_eye = [x_vals[0],y_vals[0]]
-            right_eye = [x_vals[1],y_vals[1]]
-            
+            left_eye = [x_vals[0], y_vals[0]]
+            right_eye = [x_vals[1], y_vals[1]]
 
             up = y_vals[2]
             down = y_vals[3]
             left = x_vals[4]
             right = x_vals[5]
 
-            #swap left and right eyes
+            # swap left and right eyes
             if right_eye[0] > left_eye[0]:
                 temp = right_eye
-                right_eye =left_eye
+                right_eye = left_eye
                 left_eye = temp
-            
-            up, down = swap_if_greater(up,down)
-            right, left = swap_if_greater(right, left)
 
-            
+            up, down = swap_if_greater(up, down)
+            right, left = swap_if_greater(right, left)
 
             left_eye_x = left_eye[0]
             left_eye_y = left_eye[1]
             right_eye_x = right_eye[0]
             right_eye_y = right_eye[1]
 
-            
-
             if left_eye_y > right_eye_y:
                 A = (right_eye_x, left_eye_y)
                 # Integer -1 indicates that the image will rotate in the clockwise direction
                 direction = -1
-                direction_text = 'CLOCKWISE'
+                direction_text = "CLOCKWISE"
             else:
                 A = (left_eye_x, right_eye_y)
                 # Integer 1 indicates that image will rotate in the counter clockwise
                 # direction
                 direction = 1
-                direction_text = 'COUNTER CLOCKWISE'
+                direction_text = "COUNTER CLOCKWISE"
 
-            
-            
-            print("left eye: {}\nright eye: {}\nROTATING {}".format(left_eye,right_eye,direction_text))
+            print(
+                "left eye: {}\nright eye: {}\nROTATING {}".format(
+                    left_eye, right_eye, direction_text
+                )
+            )
 
             delta_x = right_eye_x - left_eye_x
             delta_y = right_eye_y - left_eye_y
@@ -235,9 +232,9 @@ class addImgClass:
 
             im = Image.fromarray(resized)
 
-            cv2.imshow("img", resized)
+            """cv2.imshow("img", resized)
             cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            cv2.destroyAllWindows()"""
 
             # Create the Pandas DataFrame
             df = pd.DataFrame(data)
@@ -250,9 +247,9 @@ class addImgClass:
 
             # Destroy all generated windows:
             cv2.destroyAllWindows()
-            
+            self.originalImagePath = imgPath
+            self.imgAfterPP = im
+            self.csvFilePath = csvPath
         except Exception as e:
             print(e)
             cv2.destroyAllWindows()
-            
-            
