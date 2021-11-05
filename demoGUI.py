@@ -19,6 +19,8 @@ import re
 import os
 import math
 
+from numpy.lib.utils import source
+
 from addImgClass import addImgClass
 
 
@@ -126,6 +128,9 @@ class thirdWindow(Screen):
     def __init__(self, **kwargs):
         super(thirdWindow, self).__init__(**kwargs)
 
+        self.imgsToSave = []
+        self.selectedImg = None
+
         box = BoxLayout(
             orientation="vertical",
             padding=(10, 10),
@@ -138,7 +143,17 @@ class thirdWindow(Screen):
         toolBar.size_hint = (1, None)
         toolBar.height = "60dp"
 
-        placeHolderForimg = Label(text="placeHolderForimg")
+        ######################## display area ############################################################################## might need to add a remove to avoid any bugs
+        self.midBox = BoxLayout(orientation="horizontal")
+        if self.selectedImg is None:
+            placeHolderForimg = Label(text="placeHolderForimg")
+            self.midBox.add_widget(placeHolderForimg)
+        else:
+            pass
+            # placeHolderForimg = Image(source=self.imgsToSave[self.selectedImg][0])
+            # self.midBox.add_widget(placeHolderForimg)
+
+        #####################################################################################################################
         uploadBox = BoxLayout(orientation="vertical", size_hint=(0.2, 1))
 
         uploadB = Button(
@@ -157,11 +172,17 @@ class thirdWindow(Screen):
         FGnet_path = "./forDisplayTry/"
         images_path = os.listdir(FGnet_path)
 
-        counter69 = 0  # must be a method for this
+        # the temp display
+        """ counter69 = 0  # must be a method for this
         for i in enumerate(images_path):
             counter69 = counter69 + 1
 
-        scrollLength = (counter69 * 100) + ((counter69 - 1) * 20)
+        scrollLength = (counter69 * 100) + ((counter69 - 1) * 20)"""
+
+        scrollCounter = 0
+        for i in self.imgsToSave:
+            scrollCounter = scrollCounter + 1
+        scrollLength = (scrollCounter * 100) + ((scrollCounter - 1) * 20)
 
         self.leftSide = GridLayout(
             size_hint_x=None,
@@ -173,16 +194,18 @@ class thirdWindow(Screen):
             width=str(scrollLength) + "dp",
         )
 
-        for i, path in enumerate(images_path):
+        # the temp display
+        """for i, path in enumerate(images_path):
             tempButton = Button(background_normal=FGnet_path + path)
+            self.leftSide.add_widget(tempButton)"""
 
-            """img = Image(
-                source=(FGnet_path + path),
-                center_x=tempButton.center_x,
-                center_y=tempButton.center_y,
-            )
-            tempButton.add_widget(img)"""
-
+        for idx, val in enumerate(
+            self.imgsToSave
+        ):  # useless kinda might remove it later since it always starts empty
+            tempButton = Button(background_normal=val[0][0])
+            tempButton.bind(
+                on_press=lambda x: self.disp(x=idx)
+            )  # on_press=lambda x: self.on_press(x=sum)
             self.leftSide.add_widget(tempButton)
 
         scrollTry.add_widget(self.leftSide)
@@ -195,7 +218,7 @@ class thirdWindow(Screen):
             size_hint=(0.9, 1),
         )
         addPoints = Button(
-            text="Add points",
+            text="Update points",
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             size_hint=(0.9, 1),
         )
@@ -218,7 +241,7 @@ class thirdWindow(Screen):
         backButton.bind(on_press=self.callback)
         toolBar.add_widget(backButton)
         box.add_widget(toolBar)
-        box.add_widget(placeHolderForimg)
+        box.add_widget(self.midBox)
         box.add_widget(self.bottomBar)
         # box.add_widget(uploadB)  #####################
         self.add_widget(box)
@@ -233,13 +256,46 @@ class thirdWindow(Screen):
         image_name = image_name[0]
         csvPath = re.sub(image_name[-4:], ".csv", path[0])
         print(path, "\n", csvPath)
-        addImgClass(path, csvPath)
+
+        values = addImgClass(path, csvPath)
+
+        listOfValues = [values.originalImagePath, values.imgAfterPP, values.csvFilePath]
+        print(listOfValues)
+        self.imgsToSave.append(listOfValues)
+        self.imgUpdate()
 
     def callback(self, instance):
         print("Button is pressed")
         print("The button % s state is <%s>" % (instance, instance.state))
         self.manager.current = "main"
         self.manager.transition.direction = "right"
+
+    def imgUpdate(self):
+        print("i am at update")
+        self.removeBeforeUpdate()
+        for idx, val in enumerate(self.imgsToSave):
+            tempButton = Button(background_normal=val[0][0])
+            tempButton.bind(on_press=lambda x: self.disp(x=idx))
+            self.leftSide.add_widget(tempButton)
+
+    def removeBeforeUpdate(self):
+        rows = [i for i in self.leftSide.children]
+        for row1 in rows:
+            self.leftSide.remove_widget(row1)
+
+    def removeMidBox(self):
+        rows = [i for i in self.midBox.children]
+        for row1 in rows:
+            self.midBox.remove_widget(row1)
+
+    def disp(self, x):
+        self.removeMidBox()
+        print(x)
+        self.selectedImg = x
+        for idx, val in enumerate(self.imgsToSave):
+            if idx == self.selectedImg:
+                placeHolderForimg = Image(source=val[0][0])
+                self.midBox.add_widget(placeHolderForimg)
 
 
 class WindowManager(ScreenManager):
