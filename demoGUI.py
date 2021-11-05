@@ -21,6 +21,13 @@ import math
 
 from addImgClass import addImgClass
 
+
+import pyautogui
+
+Window.size = (2000, 1000)
+Window.top = int((pyautogui.size().height - Window.height)) / 2
+Window.left = int((pyautogui.size().width - Window.width)) / 2
+
 """class BoxLayoutExample(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -33,6 +40,8 @@ from addImgClass import addImgClass
         self.add_widget(b3)"""
 
 from plyer import filechooser
+
+from kivy.config import Config
 
 
 class MainWindow(Screen):
@@ -115,7 +124,8 @@ class SecondWindow(Screen):
 
 class thirdWindow(Screen):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super(thirdWindow, self).__init__(**kwargs)
+
         box = BoxLayout(
             orientation="vertical",
             padding=(10, 10),
@@ -128,11 +138,74 @@ class thirdWindow(Screen):
         toolBar.size_hint = (1, None)
         toolBar.height = "60dp"
 
+        placeHolderForimg = Label(text="placeHolderForimg")
+        uploadBox = BoxLayout(orientation="vertical", size_hint=(0.2, 1))
 
-        uploadB = Button(text="upload")
+        uploadB = Button(
+            text="upload",
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            size_hint=(0.9, 1),
+        )
         uploadB.bind(on_release=self.upload)
-        
 
+        uploadBox.add_widget(uploadB)
+
+        self.bottomBar = BoxLayout(orientation="horizontal", size_hint=(1, 0.15))
+
+        scrollTry = ScrollView(pos_hint={"center_x": 0.5, "center_y": 0.5})
+
+        FGnet_path = "./forDisplayTry/"
+        images_path = os.listdir(FGnet_path)
+
+        counter69 = 0  # must be a method for this
+        for i in enumerate(images_path):
+            counter69 = counter69 + 1
+
+        scrollLength = (counter69 * 100) + ((counter69 - 1) * 20)
+
+        self.leftSide = GridLayout(
+            size_hint_x=None,
+            rows=1,
+            col_default_width="100dp",
+            col_force_default=True,
+            spacing=("20dp", 0),
+            padding=(0, 0),
+            width=str(scrollLength) + "dp",
+        )
+
+        for i, path in enumerate(images_path):
+            tempButton = Button(background_normal=FGnet_path + path)
+
+            """img = Image(
+                source=(FGnet_path + path),
+                center_x=tempButton.center_x,
+                center_y=tempButton.center_y,
+            )
+            tempButton.add_widget(img)"""
+
+            self.leftSide.add_widget(tempButton)
+
+        scrollTry.add_widget(self.leftSide)
+
+        self.rightSide = BoxLayout(orientation="vertical", size_hint=(0.2, 1))
+
+        confirm = Button(
+            text="confirm",
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            size_hint=(0.9, 1),
+        )
+        addPoints = Button(
+            text="Add points",
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            size_hint=(0.9, 1),
+        )
+
+        self.rightSide.add_widget(confirm)
+        self.rightSide.add_widget(addPoints)
+
+        self.bottomBar.add_widget(uploadBox)
+        self.bottomBar.add_widget(scrollTry)
+        self.bottomBar.add_widget(self.rightSide)
 
         backButton = Button(
             size_hint=(None, None),
@@ -145,21 +218,23 @@ class thirdWindow(Screen):
         backButton.bind(on_press=self.callback)
         toolBar.add_widget(backButton)
         box.add_widget(toolBar)
-        box.add_widget(uploadB)
+        box.add_widget(placeHolderForimg)
+        box.add_widget(self.bottomBar)
+        # box.add_widget(uploadB)  #####################
         self.add_widget(box)
 
     def upload(self, instance):
         path = filechooser.open_file(title="Pick a img file..")
-        if not path :
-            print("{}\nNO IMAGE CHOSEN!!!!\n{}".format('-'*10,'-'*10))
+        if not path:
+            print("{}\nNO IMAGE CHOSEN!!!!\n{}".format("-" * 10, "-" * 10))
             return False
-        
-        image_name = re.findall('\w+\.\w+',path[0])
+
+        image_name = re.findall("\w+\.\w+", path[0])
         image_name = image_name[0]
-        csvPath = re.sub(image_name[-4:],'.csv',path[0])
-        print(path,'\n',csvPath)
+        csvPath = re.sub(image_name[-4:], ".csv", path[0])
+        print(path, "\n", csvPath)
         addImgClass(path, csvPath)
-    
+
     def callback(self, instance):
         print("Button is pressed")
         print("The button % s state is <%s>" % (instance, instance.state))
@@ -182,4 +257,5 @@ class myTryApp(App):
 
 
 if __name__ == "__main__":
+
     myTryApp().run()
