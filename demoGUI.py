@@ -275,7 +275,7 @@ class thirdWindow(Screen):
         self.removeBeforeUpdate()
         for idx, val in enumerate(self.imgsToSave):
             tempButton = Button(background_normal=val[0][0])
-            tempButton.bind(on_press=lambda x: self.disp(x=idx))
+            tempButton.bind(on_press=lambda *args, x=idx: self.disp(x))
             self.leftSide.add_widget(tempButton)
 
     def removeBeforeUpdate(self):
