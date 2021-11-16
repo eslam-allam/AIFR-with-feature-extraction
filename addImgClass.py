@@ -231,6 +231,7 @@ class addImgClass:
             # print(resized.shape) should be deleted
 
             im = Image.fromarray(resized)
+            annIM = Image.fromarray(self.image2)
 
             """cv2.imshow("img", resized)
             cv2.waitKey(0)
@@ -247,7 +248,11 @@ class addImgClass:
 
             # Destroy all generated windows:
             cv2.destroyAllWindows()
+            print("+++++++++++++++++++")
+            print(annIM)
+            print("+++++++++++++++++++")
             self.originalImagePath = imgPath
+            self.annotImage = self.image2
             self.imgAfterPP = im
             self.csvFilePath = csvPath
         except Exception as e:
