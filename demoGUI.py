@@ -23,8 +23,15 @@ from numpy.lib.utils import source
 
 from addImgClass import addImgClass
 
+from io import BytesIO
+
+from PIL import Image as PILImage
+from kivy.core.image import Image as Core_Image
+from kivy.uix.image import Image as kiImage
+
 
 import pyautogui
+
 
 Window.size = (2000, 1000)
 Window.top = int((pyautogui.size().height - Window.height)) / 2
@@ -237,9 +244,51 @@ class thirdWindow(Screen):
             height="40dp",
             text="go back",
         )
-
         backButton.bind(on_press=self.callback)
+
+        imageSwapButtons = BoxLayout(
+            orientation="horizontal",
+            size_hint=(None, None),
+            pos_hint={"center_x": 0.6, "center_y": 0.5},
+            width="500dp",
+            height="40dp",
+        )
+
+        orginalImage = Button(
+            # size_hint=(None, None),
+            # pos_hint={"x": 0, "center_y": 0.5},
+            # width="100dp",
+            # height="40dp",
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            size_hint=(0.5, 1),
+            text="Original",
+        )
+        orginalImage.bind(on_press=self.dispOG)
+
+        imageAfterAnotation = Button(
+            # size_hint=(None, None),
+            # pos_hint={"x": 0, "center_y": 0.5},
+            # width="100dp",
+            # height="40dp",
+            text="After Anottation",
+        )
+        imageAfterAnotation.bind(on_press=self.dispAI)
+
+        inageAfterPP = Button(
+            # size_hint=(None, None),
+            # pos_hint={"x": 0, "center_y": 0.5},
+            # width="100dp",
+            # height="40dp",
+            text="Preprocessed",
+        )
+        inageAfterPP.bind(on_press=self.dispPP)
+
+        imageSwapButtons.add_widget(orginalImage)
+        imageSwapButtons.add_widget(imageAfterAnotation)
+        imageSwapButtons.add_widget(inageAfterPP)
+
         toolBar.add_widget(backButton)
+        toolBar.add_widget(imageSwapButtons)
         box.add_widget(toolBar)
         box.add_widget(self.midBox)
         box.add_widget(self.bottomBar)
@@ -259,7 +308,12 @@ class thirdWindow(Screen):
 
         values = addImgClass(path, csvPath)
 
-        listOfValues = [values.originalImagePath, values.imgAfterPP, values.csvFilePath]
+        listOfValues = [
+            values.originalImagePath,
+            values.annotImage,
+            values.imgAfterPP,
+            values.csvFilePath,
+        ]
         print(listOfValues)
         self.imgsToSave.append(listOfValues)
         self.imgUpdate()
@@ -296,6 +350,60 @@ class thirdWindow(Screen):
             if idx == self.selectedImg:
                 placeHolderForimg = Image(source=val[0][0])
                 self.midBox.add_widget(placeHolderForimg)
+
+    def dispAI(self, instance):
+        if not self.selectedImg is None:
+            self.removeMidBox()
+            for idx, val in enumerate(self.imgsToSave):
+                if idx == self.selectedImg:
+                    # pil_img = Image.open(val[0][0])
+                    # print(val[1][0])
+                    # print(type(pil_img))
+                    pil_img = PILImage.fromarray(val[1])
+
+                    print(pil_img)
+                    img_bytes = BytesIO()
+
+                    pil_img.save(img_bytes, format="PNG")
+                    img_bytes.seek(0)
+                    img = Core_Image(BytesIO(img_bytes.read()), ext="png")
+
+                    self.beeld = kiImage()
+                    self.beeld.texture = img.texture
+                    self.midBox.add_widget(self.beeld)
+
+                    """if os.path.exists("./tempImages") == False:
+                        os.makedirs("./tempImages")
+                        print("i am herrrreeeeeeeee")
+
+                    im1 = pil_img.save("./tempImages/" + str(idx) + "-1.png")
+                    placeHolderForimg = Image(
+                        source="./tempImages/" + str(idx) + "-1.png"
+                    )
+                    self.midBox.add_widget(placeHolderForimg)"""
+
+    def dispOG(self, instance):
+        if not self.selectedImg is None:
+            self.removeMidBox()
+            for idx, val in enumerate(self.imgsToSave):
+                if idx == self.selectedImg:
+                    placeHolderForimg = Image(source=val[0][0])
+                    self.midBox.add_widget(placeHolderForimg)
+
+    def dispPP(self, instance):
+        if not self.selectedImg is None:
+            self.removeMidBox()
+            for idx, val in enumerate(self.imgsToSave):
+                if idx == self.selectedImg:
+                    pil_img = val[2]
+                    img_bytes = BytesIO()
+                    pil_img.save(img_bytes, format="PNG")
+                    img_bytes.seek(0)
+                    img = Core_Image(BytesIO(img_bytes.read()), ext="png")
+
+                    self.beeld = kiImage()
+                    self.beeld.texture = img.texture
+                    self.midBox.add_widget(self.beeld)
 
 
 class WindowManager(ScreenManager):
