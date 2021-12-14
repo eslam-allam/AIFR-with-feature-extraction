@@ -252,6 +252,7 @@ class addImgClass:
             print(annIM)
             print("+++++++++++++++++++")
             self.originalImagePath = imgPath
+            self.image2 = cv2.cvtColor(self.image2, cv2.COLOR_BGR2RGB)
             self.annotImage = self.image2
             self.imgAfterPP = im
             self.csvFilePath = csvPath
