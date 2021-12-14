@@ -19,16 +19,16 @@ WindowManager:
                 source: 'guiImages/facial-recognition-connected-real-estate.png'
             Label:
                 size_hint: (1, 0.1)
-                
+                font_size: '30sp'
                 text: "Age inavraint face recognition demo"
             Label:
                 size_hint: (1, 0.1)
                 
-                text: "by us idk lol it's ugly"
-            Button:
-                text: "B"
-                size_hint: (0.8, 0.2)
-                pos_hint:{"center_x": 0.5}
+                text: "Project created by Moataz Shaker and Eslam Allam"
+            #Button:
+            #    text: "B"
+            #    size_hint: (0.8, 0.2)
+            #    pos_hint:{"center_x": 0.5}
             
             # u can use any of the instead of x
             # x (starts from left), center_x(starts from cenetr), right (starts from right)
@@ -42,6 +42,7 @@ WindowManager:
             spacing: "10dp"
             Button:
                 text: "Display dataset images"
+                font_size: '30sp'
                 size_hint: (0.8, 0.9)
                 pos_hint:{"center_x": 0.5}
                 on_release: 
@@ -49,6 +50,7 @@ WindowManager:
                     root.manager.transition.direction = 'left'
             Button:
                 text: "Add new set of images"
+                font_size: '30sp'
                 size_hint: (0.8, 0.9)
                 pos_hint:{"center_x": 0.5}
                 on_release: 
@@ -56,14 +58,17 @@ WindowManager:
                     root.manager.transition.direction = 'left'
             Button:
                 text: "Re train the dnn"
+                font_size: '30sp'
                 size_hint: (0.8, 0.9)
                 pos_hint:{"center_x": 0.5}
             Button:
                 text: "Run the dnn"
+                font_size: '30sp'
                 size_hint: (0.8, 0.9)
                 pos_hint:{"center_x": 0.5}
             Button:
                 text: "Exit"
+                font_size: '30sp'
                 size_hint: (0.8, 0.9)
                 pos_hint:{"center_x": 0.5}
         
