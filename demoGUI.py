@@ -31,7 +31,8 @@ from kivy.uix.image import Image as kiImage
 
 
 import pyautogui
-
+import cv2
+from matplotlib import pyplot as plt
 
 Window.size = (2000, 1000)
 Window.top = int((pyautogui.size().height - Window.height)) / 2
@@ -57,16 +58,19 @@ class MainWindow(Screen):
     pass
 
 
+# diplay img page
 class SecondWindow(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
+        # the set up for background area
         firstArea = BoxLayout(orientation="vertical")
 
+        # first area bar (toolbar)
         toolBar = BoxLayout(orientation="horizontal")
         toolBar.size_hint = (1, None)
         toolBar.height = "60dp"
 
+        # back button followed by it's binding to the callback
         backButton = Button(
             size_hint=(None, None),
             pos_hint={"x": 0, "center_y": 0.5},
@@ -76,34 +80,64 @@ class SecondWindow(Screen):
         )
 
         backButton.bind(on_press=self.callback)
+        #########################################################
 
+        # display area
         scrollTry = ScrollView(pos_hint={"center_x": 0.5, "center_y": 0.5}, height=5000)
         print(self.size)
         print("self.size")
         theImagesGrid = StackLayout()
 
-        FGnet_path = "./datasets/FGNET/newImages/"
+        """FGnet_path = "./datasets/FGNET/newImages/"
         images_path = os.listdir(FGnet_path)
         sizz = 0
         for i in enumerate(images_path):
             sizz = sizz + 1
+        """
+        dArray = self.imgsAsDArray()
 
-        hhh = math.ceil(sizz / 4) * 200
+        hieghtScroll = math.ceil(len(dArray) / 4) * 200
         grid = GridLayout(
             size_hint_y=None,
             cols=4,
             row_default_height="200dp",
             row_force_default=True,
+            # col_default_width="200dp",
             spacing=(0, 0),
             padding=(0, 0),
-            height=str(hhh) + "dp",
+            height=str(hieghtScroll) + "dp",
         )
 
+        FGnet_path = "./datasets/FGNET/newImages/"
+        for data in dArray:
+            path = dArray[data][len(dArray[data]) - 1][1]
+            buttIMG = Button(
+                background_normal=(FGnet_path + path),
+                pos_hint={"center_x": 0.5, "center_y": 0.5},
+                size_hint_x=None,
+                width="200dp",
+            )
+
+            buttIMG.bind(on_press=lambda *args, x=dArray[data]: self.dispAll(x))
+            # img = Image(source=(FGnet_path + path))  # , size_hint=(0.2, 0.2)
+            imgLabel = Label(text=str(data), size_hint=(1, 0.2))
+
+            boxComp = BoxLayout(orientation="vertical")
+            boxComp.add_widget(buttIMG)
+            boxComp.add_widget(imgLabel)
+            grid.add_widget(boxComp)
+
+        """
         for i, path in enumerate(images_path):
-            img = Image(source=(FGnet_path + path), size_hint=(0.2, 0.2))
-            grid.add_widget(img)
+            img = Image(source=(FGnet_path + path))  # , size_hint=(0.2, 0.2)
+            imgLabel = Label(text=str(i), size_hint=(1, 0.2))
+            boxComp = BoxLayout(orientation="vertical")
+            boxComp.add_widget(img)
+            boxComp.add_widget(imgLabel)
+            grid.add_widget(boxComp)
             # if i == 100:
             #   break
+        """
 
         """for i in range(5):
             x = Label(text=str(i))
@@ -115,7 +149,7 @@ class SecondWindow(Screen):
         theImagesGrid.add_widget(b1)
         theImagesGrid.add_widget(b2)
         theImagesGrid.add_widget(b3)"""
-
+        # adding  all elments to the background
         toolBar.add_widget(backButton)
         scrollTry.add_widget(grid)
 
@@ -129,6 +163,49 @@ class SecondWindow(Screen):
         print("The button % s state is <%s>" % (instance, instance.state))
         self.manager.current = "main"
         self.manager.transition.direction = "right"
+
+    # generate the images in a dictionaries
+    def imgsAsDArray(self):
+        FGnet_path = "./datasets/FGNET/newImages/"
+        images_path = os.listdir(FGnet_path)
+        finalData = []
+
+        for i, path in enumerate(images_path):
+            names = path.split(".")[0]
+            names = names.split("A")
+            names[1] = names[1].replace("a", "")
+            names[1] = names[1].replace("b", "")
+            # finalData.append([int(names[0]), int(names[1])])
+            finalData.append([names[0], [int(names[1]), path]])
+
+        # print(finalData)
+
+        collectingData = {}
+        # collectingData["sd"] = []
+
+        for data in finalData:
+            try:
+                collectingData[data[0]].append(data[1])
+            except:
+                # print("An exception occurred")
+                collectingData[data[0]] = [data[1]]
+        return collectingData
+
+    def dispAll(self, x):
+        images = []
+        FGnet_path = "./datasets/FGNET/newImages/"
+        for data in x:
+            images.append(cv2.imread(FGnet_path + data[1]))
+        fig = plt.figure(figsize=(10, 7))
+        columns = 4
+        rows = math.ceil(len(x) / 4)
+
+        for idx, y in enumerate(images):
+            fig.add_subplot(rows, columns, idx + 1)
+            plt.imshow(y)
+            plt.axis("off")
+            plt.title("First")
+        plt.show()
 
 
 class thirdWindow(Screen):

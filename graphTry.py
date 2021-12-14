@@ -57,7 +57,25 @@ for data in collectingData:
 
 # print(finalCollection[0])
 
+sumImgCount = 0
+totImgCount = 0
+for var in imgCount:
+    sumImgCount += var
+    totImgCount += 1
 
+avgImgCount = sumImgCount / totImgCount
+print(avgImgCount)
+
+
+###############################################
+sumOffinalAvgDiff = 0
+totFinalAvgDiff = 0
+for var in finalAvgDiff:
+    sumOffinalAvgDiff = sumOffinalAvgDiff + var
+    totFinalAvgDiff = totFinalAvgDiff + 1
+
+avgFinalAvgDiff = sumOffinalAvgDiff / totFinalAvgDiff
+print(avgFinalAvgDiff)
 plt.bar(
     finalCollectionLabels,
     imgCount,
