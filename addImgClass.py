@@ -238,13 +238,13 @@ class addImgClass:
             cv2.destroyAllWindows()"""
 
             # Create the Pandas DataFrame
-            df = pd.DataFrame(data)
-            print()
-            print(df)
-            print()
+            # df = pd.DataFrame(data)
+            # print()
+            # print(df)
+            # print()
 
             # Export the dataframe to a csv file
-            df.to_csv(path_or_buf=csvPath, index=None, header=True)
+            # df.to_csv(path_or_buf=csvPath, index=None, header=True)
 
             # Destroy all generated windows:
             cv2.destroyAllWindows()
@@ -255,7 +255,7 @@ class addImgClass:
             self.image2 = cv2.cvtColor(self.image2, cv2.COLOR_BGR2RGB)
             self.annotImage = self.image2
             self.imgAfterPP = im
-            self.csvFilePath = csvPath
+            self.csvFilePath = data
         except Exception as e:
             print(e)
             cv2.destroyAllWindows()

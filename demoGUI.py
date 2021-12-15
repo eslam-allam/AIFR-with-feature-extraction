@@ -7,6 +7,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.stacklayout import StackLayout
 
 from kivy.uix.button import Button
+from kivy.uix.popup import Popup
 
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen
@@ -33,6 +34,7 @@ from kivy.uix.image import Image as kiImage
 import pyautogui
 import cv2
 from matplotlib import pyplot as plt
+import pandas as pd  # Import Pandas library
 
 Window.size = (2000, 1000)
 Window.top = int((pyautogui.size().height - Window.height)) / 2
@@ -53,9 +55,117 @@ from plyer import filechooser
 
 from kivy.config import Config
 
+currDirectory = os.getcwd()
+
+# os.chdir(currDirectory)  # reset the directory (add it it when do u want to reset a directory)
+
 
 class MainWindow(Screen):
-    pass
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        backgroundGrid = BoxLayout(orientation="horizontal")
+
+        # left side grid
+
+        leftSideGrid = BoxLayout(
+            orientation="vertical",
+            size_hint=(1, 0.9),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+        )
+
+        mainPageImg = Image(
+            source=("./guiImages/facial-recognition-connected-real-estate.png"),
+            size_hint=(0.9, 1),
+            pos_hint={"center_x": 0.5},
+        )
+
+        leftTopic = Label(
+            size_hint=(1, 0.1),
+            font_size="30sp",
+            text="Age inavraint face recognition demo",
+        )
+
+        leftNames = Label(
+            size_hint=(1, 0.1),
+            text="Project created by Moataz Shaker and Eslam Allam",
+        )
+
+        leftSideGrid.add_widget(mainPageImg)
+        leftSideGrid.add_widget(leftTopic)
+        leftSideGrid.add_widget(leftNames)
+
+        # right side grid
+
+        rightSideGrid = BoxLayout(
+            orientation="vertical",
+            size_hint=(1, 0.8),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            spacing="10dp",
+        )
+
+        but1 = Button(
+            text="Display dataset images",
+            font_size="30sp",
+            size_hint=(0.8, 0.9),
+            pos_hint={"center_x": 0.5},
+        )
+        but1.bind(on_press=self.but1Call)
+
+        but2 = Button(
+            text="Add new set of images",
+            font_size="30sp",
+            size_hint=(0.8, 0.9),
+            pos_hint={"center_x": 0.5},
+        )
+        but2.bind(on_press=self.but2Call)
+
+        but3 = Button(
+            text="Re train the dnn",
+            font_size="30sp",
+            size_hint=(0.8, 0.9),
+            pos_hint={"center_x": 0.5},
+        )
+
+        but4 = Button(
+            text="Run the dnn",
+            font_size="30sp",
+            size_hint=(0.8, 0.9),
+            pos_hint={"center_x": 0.5},
+        )
+
+        but5 = Button(
+            text="Exit",
+            font_size="30sp",
+            size_hint=(0.8, 0.9),
+            pos_hint={"center_x": 0.5},
+        )
+        but5.bind(on_press=self.but5Call)
+
+        rightSideGrid.add_widget(but1)
+        rightSideGrid.add_widget(but2)
+        rightSideGrid.add_widget(but3)
+        rightSideGrid.add_widget(but4)
+        rightSideGrid.add_widget(but5)
+
+        # background init
+        backgroundGrid.add_widget(leftSideGrid)
+        backgroundGrid.add_widget(rightSideGrid)
+        self.add_widget(backgroundGrid)
+
+    def but1Call(self, instance):
+        print("Button is pressed")
+        print("The button % s state is <%s>" % (instance, instance.state))
+        self.manager.current = "second"
+        self.manager.transition.direction = "left"
+
+    def but2Call(self, instance):
+        print("Button is pressed")
+        print("The button % s state is <%s>" % (instance, instance.state))
+        self.manager.current = "third"
+        self.manager.transition.direction = "left"
+
+    def but5Call(self, instance):
+        exit()
 
 
 # diplay img page
@@ -118,7 +228,9 @@ class SecondWindow(Screen):
                 width="200dp",
             )
 
-            buttIMG.bind(on_press=lambda *args, x=dArray[data]: self.dispAll(x))
+            buttIMG.bind(
+                on_press=lambda *args, imgArr=dArray[data]: self.dispAll(imgArr)
+            )
             # img = Image(source=(FGnet_path + path))  # , size_hint=(0.2, 0.2)
             imgLabel = Label(text=str(data), size_hint=(1, 0.2))
 
@@ -191,21 +303,25 @@ class SecondWindow(Screen):
                 collectingData[data[0]] = [data[1]]
         return collectingData
 
-    def dispAll(self, x):
-        images = []
-        FGnet_path = "./datasets/FGNET/newImages/"
-        for data in x:
-            images.append(cv2.imread(FGnet_path + data[1]))
-        fig = plt.figure(figsize=(10, 7))
-        columns = 4
-        rows = math.ceil(len(x) / 4)
+    def dispAll(self, xpic):
+        os.chdir(currDirectory)
+        try:
+            images = []
+            FGnet_path = "./datasets/FGNET/newImages/"
+            for data in xpic:
+                images.append(cv2.imread(FGnet_path + data[1]))
+            fig = plt.figure(figsize=(10, 7))
+            columns = 4
+            rows = math.ceil(len(xpic) / 4)
 
-        for idx, y in enumerate(images):
-            fig.add_subplot(rows, columns, idx + 1)
-            plt.imshow(y)
-            plt.axis("off")
-            plt.title("First")
-        plt.show()
+            for idx, y in enumerate(images):
+                fig.add_subplot(rows, columns, idx + 1)
+                plt.imshow(y)
+                plt.axis("off")
+                plt.title("First")
+            plt.show()
+        except:
+            print(xpic)
 
 
 class thirdWindow(Screen):
@@ -238,6 +354,8 @@ class thirdWindow(Screen):
             # self.midBox.add_widget(placeHolderForimg)
 
         #####################################################################################################################
+
+        # bottom bar
         uploadBox = BoxLayout(orientation="vertical", size_hint=(0.2, 1))
 
         uploadB = Button(
@@ -288,7 +406,7 @@ class thirdWindow(Screen):
         ):  # useless kinda might remove it later since it always starts empty
             tempButton = Button(background_normal=val[0][0])
             tempButton.bind(
-                on_press=lambda x: self.disp(x=idx)
+                on_press=lambda y: self.disp(y=idx)
             )  # on_press=lambda x: self.on_press(x=sum)
             self.leftSide.add_widget(tempButton)
 
@@ -297,10 +415,11 @@ class thirdWindow(Screen):
         self.rightSide = BoxLayout(orientation="vertical", size_hint=(0.2, 1))
 
         confirm = Button(
-            text="confirm",
+            text="Save to Dataset",
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             size_hint=(0.9, 1),
         )
+        confirm.bind(on_press=self.saveAll)
         addPoints = Button(
             text="Update points",
             pos_hint={"center_x": 0.5, "center_y": 0.5},
@@ -373,6 +492,7 @@ class thirdWindow(Screen):
         self.add_widget(box)
 
     def upload(self, instance):
+        # currDirectory = os.getcwd()
         path = filechooser.open_file(title="Pick a img file..")
         if not path:
             print("{}\nNO IMAGE CHOSEN!!!!\n{}".format("-" * 10, "-" * 10))
@@ -393,6 +513,7 @@ class thirdWindow(Screen):
         ]
         print(listOfValues)
         self.imgsToSave.append(listOfValues)
+        # os.chdir(currDirectory)
         self.imgUpdate()
 
     def callback(self, instance):
@@ -406,7 +527,7 @@ class thirdWindow(Screen):
         self.removeBeforeUpdate()
         for idx, val in enumerate(self.imgsToSave):
             tempButton = Button(background_normal=val[0][0])
-            tempButton.bind(on_press=lambda *args, x=idx: self.disp(x))
+            tempButton.bind(on_press=lambda *args, hmm=idx: self.disp(hmm))
             self.leftSide.add_widget(tempButton)
 
     def removeBeforeUpdate(self):
@@ -481,6 +602,64 @@ class thirdWindow(Screen):
                     self.beeld = kiImage()
                     self.beeld.texture = img.texture
                     self.midBox.add_widget(self.beeld)
+
+    def saveAll(self, instance):
+        # print(self.imgsToSave[0][3]) cvs information
+        # df = pd.DataFrame(arr)
+        savePath = "./datasets/FGNET/newImages/"
+        newLabel = self.maxLabel()
+        print(newLabel)
+        didItGetSaved = False
+        for idx, dat in enumerate(self.imgsToSave):
+            im1 = dat[2].save(
+                savePath + "0" + str(newLabel) + "A" + str(idx + 1) + ".JPG"
+            )
+            didItGetSaved = True
+            # print(type(dat[2]))
+        if didItGetSaved == True:
+            self.removeMidBox()
+            placeHolderForimg = Label(text="placeHolderForimg")
+            self.midBox.add_widget(placeHolderForimg)
+            self.removeBeforeUpdate()
+            # create content and add to the popup
+            content = BoxLayout(orientation="vertical")
+            textP = Label(text="Images has been saved with label: 0" + str(newLabel))
+            conf = Button(text="Confirm")
+
+            content.add_widget(textP)
+            content.add_widget(conf)
+            popup = Popup(
+                title="Notice!!",
+                content=content,
+                auto_dismiss=False,
+                size_hint=(None, None),
+                size=(400, 200),
+            )
+
+            # bind the on_press event of the button to the dismiss function
+            conf.bind(on_press=popup.dismiss)
+
+            # open the popup
+            popup.open()
+            didItGetSaved = False
+
+    def maxLabel(self):
+        # pp = "D:/Files/Documents D/GitHub/AIFR-with-feature-extraction/datasets/FGNET/newImages"
+        os.chdir(currDirectory)  # reset the directory
+        FGnet_path = "./datasets/FGNET/newImages"
+        images_path = os.listdir(FGnet_path)
+
+        max = 1
+        for i, path in enumerate(images_path):
+            names = path.split(".")[0]
+            names = names.split("A")
+            # names[1] = names[1].replace("a", "")
+            # names[1] = names[1].replace("b", "")
+
+            if int(names[0]) > max:
+                max = int(names[0])
+
+        return max + 1
 
 
 class WindowManager(ScreenManager):
