@@ -1,0 +1,6 @@
+
+datasets/FGNET/points/083a17.pts
+*.pts
+*.JPG
+*.dat
+datasets/FGNET/.DS_Store
