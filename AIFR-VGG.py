@@ -4,6 +4,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 from keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
 from keras_vggface import utils
+import pandas as pd
 
 import keras
 import graphviz
@@ -250,8 +251,10 @@ print("DCA Accuracy: {}\n{}".format(metrics.accuracy_score(y_test1, predicted),s
 
 
 #%%
-age_dict_correct = dict.fromkeys(np.unique(y_test_ages),0)
-age_dict_wrong = age_dict_correct.copy()
+age_dict_correct = dict.fromkeys(np.unique(y_test_ages),[0,0])
+age_dict_correct = pd.DataFrame(data = age_dict_correct)
+age_dict_correct.index = ['correct','incorrect']
+
 total_correct = 0
 total_wrong = 0
 
@@ -259,32 +262,18 @@ total_wrong = 0
 #%%
 for i in range(0,len(y_test1)):
     if y_test1[i] == predicted[i]:
-        age_dict_correct[y_test_ages[i]] = age_dict_correct[y_test_ages[i]] + 1
+        age_dict_correct[y_test_ages[i]][0] += 1
         total_correct += 1
     else:
-        age_dict_wrong[y_test_ages[i]] = age_dict_wrong[y_test_ages[i]] + 1
+        age_dict_correct[y_test_ages[i]][1] += 1
         total_wrong += 1
 
 #%%
+age_dict_correct = age_dict_correct.T
+age_dict_correct.to_excel('dict_correct.xlsx')
 
-import pandas as pd
 
 
-df = pd.DataFrame(data=age_dict_correct, index=[0])
-
-df = (df.T)
-
-print (df)
-
-df.to_excel('dict_correct.xlsx')
-
-df = pd.DataFrame(data=age_dict_wrong, index=[0])
-
-df = (df.T)
-
-print (df)
-
-df.to_excel('dict_wrong.xlsx')
 
 # %%
 with open("./saved_models/model3/KNN_model", "wb") as f:
