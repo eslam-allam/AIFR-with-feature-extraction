@@ -251,9 +251,9 @@ print("DCA Accuracy: {}\n{}".format(metrics.accuracy_score(y_test1, predicted),s
 
 
 #%%
-age_dict_correct = dict.fromkeys(np.unique(y_test_ages),[0,0])
-age_dict_correct = pd.DataFrame(data = age_dict_correct)
-age_dict_correct.index = ['correct','incorrect']
+age_based_tally = dict.fromkeys(np.unique(y_test_ages),[0,0])
+age_based_tally = pd.DataFrame(data = age_based_tally)
+age_based_tally.index = ['correct','incorrect']
 
 total_correct = 0
 total_wrong = 0
@@ -262,15 +262,15 @@ total_wrong = 0
 #%%
 for i in range(0,len(y_test1)):
     if y_test1[i] == predicted[i]:
-        age_dict_correct[y_test_ages[i]][0] += 1
+        age_based_tally[y_test_ages[i]][0] += 1
         total_correct += 1
     else:
-        age_dict_correct[y_test_ages[i]][1] += 1
+        age_based_tally[y_test_ages[i]][1] += 1
         total_wrong += 1
 
 #%%
-age_dict_correct = age_dict_correct.T
-age_dict_correct.to_excel('dict_correct.xlsx')
+age_based_tally = age_based_tally.T
+age_based_tally.to_excel('Age_based_tally.xlsx')
 
 
 
