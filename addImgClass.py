@@ -58,7 +58,7 @@ annotation_index = 0
 
 
 class addImgClass:
-    def __init__(self, imgPath, csvPath):
+    def __init__(self, imgPath):
         global annotation_index
         annotation_index = 0
         newPath = "./datasets/FGNET/newImages/"

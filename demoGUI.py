@@ -54,10 +54,42 @@ Window.left = int((pyautogui.size().width - Window.width)) / 2
 from plyer import filechooser
 
 from kivy.config import Config
+from modelTrainingClass import modelTrainingClass
 
 currDirectory = os.getcwd()
 
 # os.chdir(currDirectory)  # reset the directory (add it it when do u want to reset a directory)
+
+trainingClassInstance = modelTrainingClass()
+
+
+def imgCount():
+    FGnet_path = "./datasets/FGNET/newImages"
+    images_path = os.listdir(FGnet_path)
+
+    finalData = []
+    totalImages = 0
+    for i, path in enumerate(images_path):
+        totalImages += 1
+        names = path.split(".")[0]
+        names = names.split("A")
+        names[1] = names[1].replace("a", "")
+        names[1] = names[1].replace("b", "")
+        finalData.append([names[0], int(names[1])])
+
+    collectingData = {}
+    # collectingData["sd"] = []
+
+    for data in finalData:
+        try:
+            collectingData[data[0]].append(data[1])
+        except:
+            # print("An exception occurred")
+            collectingData[data[0]] = [data[1]]
+
+    print(totalImages)
+    print(len(collectingData))
+    return totalImages, len(collectingData)
 
 
 class MainWindow(Screen):
@@ -82,7 +114,7 @@ class MainWindow(Screen):
         leftTopic = Label(
             size_hint=(1, 0.1),
             font_size="30sp",
-            text="Age inavraint face recognition demo",
+            text="Age invariant face recognition demo",
         )
 
         leftNames = Label(
@@ -125,6 +157,7 @@ class MainWindow(Screen):
             size_hint=(0.8, 0.9),
             pos_hint={"center_x": 0.5},
         )
+        but3.bind(on_press=self.but3Call)
 
         but4 = Button(
             text="Run the dnn",
@@ -132,6 +165,7 @@ class MainWindow(Screen):
             size_hint=(0.8, 0.9),
             pos_hint={"center_x": 0.5},
         )
+        but4.bind(on_press=self.but4Call)
 
         but5 = Button(
             text="Exit",
@@ -163,6 +197,84 @@ class MainWindow(Screen):
         print("The button % s state is <%s>" % (instance, instance.state))
         self.manager.current = "third"
         self.manager.transition.direction = "left"
+
+    def but3Call(self, instance):
+        global popupBut3
+        # pop up confirming
+        content = BoxLayout(orientation="vertical")
+        textP = Label(text="Train on the current dataset?")
+
+        buttonsBar = BoxLayout(
+            orientation="horizontal",
+            size_hint=(1, 0.5),
+            height="100dp",
+            width="100dp",
+        )
+        conf = Button(text="Confirm")
+
+        back = Button(text="Cancel")
+
+        buttonsBar.add_widget(conf)
+        buttonsBar.add_widget(back)
+
+        content.add_widget(textP)
+        content.add_widget(buttonsBar)
+
+        popupBut3 = Popup(
+            title="Notice!!",
+            content=content,
+            auto_dismiss=False,
+            size_hint=(None, None),
+            width="400dp",
+            height="200dp",
+        )
+
+        back.bind(on_press=popupBut3.dismiss)
+        conf.bind(on_press=self.trainSetOnClick)
+        # on_press=lambda y: self.disp(y=idx)
+        popupBut3.open()
+        # popup.dismiss()
+
+    def trainSetOnClick(self, instance):
+        popupBut3.dismiss()
+
+        numberOfimgs, numClasses = imgCount()
+        dcaAcc, dnnAcc = trainingClassInstance.trainModel(numberOfimgs, numClasses)
+
+        # dcaAcc, dnnAcc = trainingClassInstance.trainModel(numberOfimgs, numClasses)
+        # pop showing acc
+        # confrmation to save
+
+    def but4Call(self, instance):
+        # pop to select how to redict
+        content = BoxLayout(orientation="vertical")
+        popupBut1 = Button(text="Take a live image")
+        popupBut2 = Button(text="Browse for an image")
+        popupBut3 = Button(text="Run testing set")
+        popupBut4 = Button(text="Cancel")
+        content.add_widget(popupBut1)
+        content.add_widget(popupBut2)
+        content.add_widget(popupBut3)
+        content.add_widget(popupBut4)
+        popup = Popup(
+            title="Notice!!",
+            content=content,
+            auto_dismiss=False,
+            size_hint=(None, None),
+            width="400dp",
+            height="300dp",
+        )
+        popupBut2.bind(on_press=self.predictBrowse)
+        popupBut4.bind(on_press=popup.dismiss)
+        popup.open()
+
+    def predictBrowse(self, instance):
+        path = filechooser.open_file(title="Pick a img file..")
+        if not path:
+            print("{}\nNO IMAGE CHOSEN!!!!\n{}".format("-" * 10, "-" * 10))
+            return False
+        os.chdir(currDirectory)
+        trainingClassInstance.predictWMOdel(path, "./saved_models/model9")
 
     def but5Call(self, instance):
         exit()
@@ -503,7 +615,7 @@ class thirdWindow(Screen):
         csvPath = re.sub(image_name[-4:], ".csv", path[0])
         print(path, "\n", csvPath)
 
-        values = addImgClass(path, csvPath)
+        values = addImgClass(path)
 
         listOfValues = [
             values.originalImagePath,
