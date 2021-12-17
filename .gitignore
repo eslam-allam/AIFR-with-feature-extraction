@@ -4,3 +4,4 @@ datasets/FGNET/points/083a17.pts
 *.JPG
 *.dat
 datasets/FGNET/.DS_Store
+*.csv
