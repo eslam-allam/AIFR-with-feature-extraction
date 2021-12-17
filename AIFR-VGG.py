@@ -46,14 +46,14 @@ image_list = os.listdir(image_directory)
 images_array = np.ndarray(
     (1002, 224, 224, 3), dtype="int32"
 )  ##################################
-labels = np.arange(1002)  ##################################
-
+labels = []  ##################################
+y_test_ages = []
 # fill image and label arrays
 for i, image in enumerate(image_list):
     temp_image = cv2.imread(image_directory + image)
     images_array[i] = temp_image
-    label = int(image[0:3]) - 1
-    labels[i] = label
+    label = image[0:6]
+    labels.append(label)
 
 
 # split the data into train and test
@@ -61,6 +61,16 @@ X_train, X_test, y_train1, y_test1 = train_test_split(
     images_array, labels, test_size=0.20, random_state=33
 )
 
+for i, y in enumerate(y_train1):
+    y_train1[i] = int(y[0:3]) - 1
+
+for i, y in enumerate(y_test1):
+    y_test1[i] = int(y[0:3]) - 1
+    y_test_ages.append(int(y[4:6]))
+
+y_train1 = np.array(y_train1)
+y_test1 = np.array(y_test1)
+labels = np.array(labels)
 # freeing memory
 del (
     labels,
@@ -236,6 +246,16 @@ print("DCA Accuracy:", metrics.accuracy_score(y_test1, predicted))
 predicted = np.argmax(model.predict(X_test), axis=-1)
 print("DNN Accuracy:", metrics.accuracy_score(y_test1, predicted))
 
+#%%
+age_dict_correct = dict.fromkeys(np.unique(y_test_ages),0)
+age_dict_wrong = age_dict_correct.copy()
+total = 0
+for i in range(0,len(y_test1)-1):
+    if y_test1[i] == predicted[i]:
+        age_dict_correct[y_test_ages[i]] = age_dict_correct[y_test_ages[i]] + 1
+        total +=1
+    else:
+        age_dict_wrong[y_test_ages[i]] = age_dict_wrong[y_test_ages[i]] + 1
 
 # %%
 with open("./saved_models/model3/KNN_model", "wb") as f:
