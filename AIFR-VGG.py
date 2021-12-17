@@ -235,27 +235,56 @@ from sklearn.neighbors import KNeighborsClassifier
 
 classifier = KNeighborsClassifier(n_neighbors=5)
 classifier.fit(fused_vector, y_train1)
-predicted = classifier.predict(test_vector)
 
 
+#%%
 from sklearn import metrics
-
+spacer = 35*"-"
 # Model Accuracy, how often is the classifier correct?
-print("DCA Accuracy:", metrics.accuracy_score(y_test1, predicted))
-
 predicted = np.argmax(model.predict(X_test), axis=-1)
-print("DNN Accuracy:", metrics.accuracy_score(y_test1, predicted))
+print("{}\nDNN Accuracy: {}\n{}".format(spacer,metrics.accuracy_score(y_test1, predicted),spacer))
+
+predicted = classifier.predict(test_vector)
+print("DCA Accuracy: {}\n{}".format(metrics.accuracy_score(y_test1, predicted),spacer))
+
+
 
 #%%
 age_dict_correct = dict.fromkeys(np.unique(y_test_ages),0)
 age_dict_wrong = age_dict_correct.copy()
-total = 0
-for i in range(0,len(y_test1)-1):
+total_correct = 0
+total_wrong = 0
+
+
+#%%
+for i in range(0,len(y_test1)):
     if y_test1[i] == predicted[i]:
         age_dict_correct[y_test_ages[i]] = age_dict_correct[y_test_ages[i]] + 1
-        total +=1
+        total_correct += 1
     else:
         age_dict_wrong[y_test_ages[i]] = age_dict_wrong[y_test_ages[i]] + 1
+        total_wrong += 1
+
+#%%
+
+import pandas as pd
+
+
+df = pd.DataFrame(data=age_dict_correct, index=[0])
+
+df = (df.T)
+
+print (df)
+
+df.to_excel('dict_correct.xlsx')
+
+df = pd.DataFrame(data=age_dict_wrong, index=[0])
+
+df = (df.T)
+
+print (df)
+
+df.to_excel('dict_wrong.xlsx')
 
 # %%
 with open("./saved_models/model3/KNN_model", "wb") as f:
