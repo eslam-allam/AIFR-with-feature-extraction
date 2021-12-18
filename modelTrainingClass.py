@@ -1,3 +1,4 @@
+from re import T
 import tensorflow as tf
 from tensorflow.keras.applications.vgg16 import preprocess_input
 from keras.models import Model
@@ -41,6 +42,7 @@ currDirectory = os.getcwd()
 class modelTrainingClass:
     # def __init__():
     #    pass
+    trained = False
 
     def trainModel(self, numberOfimgs, numClasses):
         global classifier, Ax1, Ay1, Ax2, Ay2, Ax3, Ay3, m1, m2, pooling, X_test, y_test1, predicted, dispTemp
@@ -217,6 +219,7 @@ class modelTrainingClass:
         predicted = np.argmax(model.predict(X_test), axis=-1)
         dnnAcc = metrics.accuracy_score(y_test1, predicted)
         print("DNN Accuracy:", dnnAcc)
+        self.trained = True
         return dcaAcc, dnnAcc
 
     # Model Saving
@@ -287,7 +290,9 @@ class modelTrainingClass:
 
         predicted = classifier.predict(test_vector)
 
+        print("from trained model")
         print(predicted)
+        self.showOneImgprediction(predicted, imgPath)
         return predicted
 
     def predictWMOdel(self, imgPath, model):
@@ -344,7 +349,9 @@ class modelTrainingClass:
 
         predicted = classifier.predict(test_vector)
 
+        print("From model " + model)
         print(predicted)
+        self.showOneImgprediction(predicted, imgPath)
         return predicted
 
     def imgsAsDArray(self):  # saves all images of new images in an array
@@ -385,10 +392,82 @@ class modelTrainingClass:
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
-    def displayAllpredections(self):
+    def showOneImgprediction(self, imgPrediction, ogImg):
         def handle(event):
             if event.key == "r":
-                sys.exit(0)
+                plt.close("all")
+
+        collData = self.imgsAsDArray()
+        FGnet_path = "./datasets/FGNET/newImages/"
+
+        columns = 4
+        predctedLabel = imgPrediction + 1
+        predictedLabelString = str(predctedLabel[0])
+
+        if len(predictedLabelString) == 1:
+            stringLabel = "00" + predictedLabelString
+        elif len(predictedLabelString) == 2:
+            stringLabel = "0" + predictedLabelString
+        else:
+            stringLabel = predictedLabelString
+
+        print(stringLabel)
+
+        rows = len(collData[stringLabel]) / float(columns)
+        rows = math.ceil(rows)
+
+        ratio = np.ones(rows + 2, dtype="float32")
+        ratio[1] = 0.00001
+
+        # print(ogImg)
+        # print(type(ogImg))
+        temp = cv2.imread(ogImg[0])
+        temp = cv2.cvtColor(temp, cv2.COLOR_BGR2RGB)
+
+        fig = plt.figure(1, tight_layout=True, figsize=(20, 20))
+        gs = gridspec.GridSpec(rows + 2, columns, height_ratios=ratio)
+        ax = fig.add_subplot(gs[0, :])
+        ax.axes.get_xaxis().set_visible(False)
+        ax.axes.get_yaxis().set_visible(False)
+        ax.set_title("INPUT IMAGE: ", fontsize=20)
+        ax.imshow(temp)
+
+        ax = fig.add_subplot(gs[1, :])
+        ax.axes.get_xaxis().set_visible(False)
+        ax.axes.get_yaxis().set_visible(False)
+        ax.set_title(
+            "MATCHING IMAGES: Predicted Class:{}".format(predctedLabel), fontsize=20
+        )
+
+        count = 0
+        for row in range(2, rows + 2):
+            for col in range(columns):
+                ax = fig.add_subplot(gs[row, col])
+                ax.axes.get_xaxis().set_visible(False)
+                ax.axes.get_yaxis().set_visible(False)
+                temp2 = cv2.imread(FGnet_path + collData[stringLabel][count][1])
+                ax.imshow(temp2)
+                count += 1
+                if count == len(collData[stringLabel]):
+                    break
+
+        fig.align_labels()
+        fig.canvas.mpl_connect("key_press_event", handle)
+        mng = plt.get_current_fig_manager()
+
+        # comment the next line if you are using ipyKernel/jupyter notebook!(Interactive shell)
+        mng.window.state("zoomed")
+        plt.show()
+
+    breakLoop = False
+
+    def displayAllpredections(self):
+        self.breakLoop = False
+
+        def handle(event):
+            if event.key == "r":
+                self.breakLoop = True
+                plt.close("all")
 
         collData = self.imgsAsDArray()
         FGnet_path = "./datasets/FGNET/newImages/"
@@ -407,6 +486,8 @@ class modelTrainingClass:
                 stringLabel = "00" + actualLabelString
             elif len(actualLabelString) == 2:
                 stringLabel = "0" + actualLabelString
+            else:  # new line not importnat
+                stringLabel = actualLabelString
             # print(collData["0" + str(actualLabel)])
             rows = len(collData[stringLabel]) / float(columns)
             rows = math.ceil(rows)
@@ -451,6 +532,29 @@ class modelTrainingClass:
             # comment the next line if you are using ipyKernel/jupyter notebook!(Interactive shell)
             mng.window.state("zoomed")
             plt.show()
+            if self.breakLoop == True:
+                break
+
+    def getLastModel(self):
+        try:
+            savePath = "./saved_models/model"
+
+            sPath = "./saved_models"
+            modelList = os.listdir(sPath)
+            modelNum = 0
+            for data in modelList:
+                currNum = data.split("model")
+                if int(currNum[1]) > modelNum:
+                    modelNum = int(currNum[1])
+
+            modelNumStr = str(modelNum)
+            if modelNum > 0:
+                return savePath + modelNumStr
+            else:
+                return False
+
+        except:
+            return False
 
 
 def lr_schedule(epoch):

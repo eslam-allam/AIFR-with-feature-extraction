@@ -206,44 +206,98 @@ class MainWindow(Screen):
 
         buttonsBar = BoxLayout(
             orientation="horizontal",
-            size_hint=(1, 0.5),
+            size_hint=(1, 0.7),
             height="100dp",
             width="100dp",
         )
         conf = Button(text="Confirm")
-
+        rev = Button(
+            text="Review trained model",
+            size_hint=(1, 0.7),
+        )
         back = Button(text="Cancel")
 
         buttonsBar.add_widget(conf)
+
         buttonsBar.add_widget(back)
 
         content.add_widget(textP)
+
         content.add_widget(buttonsBar)
+        if trainingClassInstance.trained == True:
+            content.add_widget(rev)
 
         popupBut3 = Popup(
             title="Notice!!",
             content=content,
             auto_dismiss=False,
             size_hint=(None, None),
-            width="400dp",
+            width="500dp",
             height="200dp",
         )
 
         back.bind(on_press=popupBut3.dismiss)
+        rev.bind(on_press=self.revTModel)
         conf.bind(on_press=self.trainSetOnClick)
         # on_press=lambda y: self.disp(y=idx)
         popupBut3.open()
         # popup.dismiss()
 
+    def revTModel(self, instance):
+        if trainingClassInstance.trained == True:
+            trainingClassInstance.displayAllpredections()
+
     def trainSetOnClick(self, instance):
+        global popupSave
         popupBut3.dismiss()
 
         numberOfimgs, numClasses = imgCount()
         dcaAcc, dnnAcc = trainingClassInstance.trainModel(numberOfimgs, numClasses)
 
-        # dcaAcc, dnnAcc = trainingClassInstance.trainModel(numberOfimgs, numClasses)
+        content = BoxLayout(orientation="vertical")
+        textP = Label(text="The accuracy of the model is " + str(dcaAcc))
+        save = Button(text="Save Model")
+        rev = Button(
+            text="Review trained model",
+            size_hint=(1, 0.7),
+        )
+        canc = Button(text="Cancel")
+
+        buttonsBar = BoxLayout(
+            orientation="horizontal",
+            size_hint=(1, 0.7),
+            height="100dp",
+            width="100dp",
+        )
+        buttonsBar.add_widget(save)
+
+        buttonsBar.add_widget(canc)
+
+        content.add_widget(textP)
+
+        content.add_widget(buttonsBar)
+        if trainingClassInstance.trained == True:
+            content.add_widget(rev)
+
+        popupSave = Popup(
+            title="Notice!!",
+            content=content,
+            auto_dismiss=False,
+            size_hint=(None, None),
+            width="500dp",
+            height="200dp",
+        )
+        save.bind(on_press=self.saveTrained)
+        canc.bind(on_press=popupSave.dismiss)
+        rev.bind(on_press=self.revTModel)
+        popupSave.open()
         # pop showing acc
         # confrmation to save
+
+    def saveTrained(self, instance):
+        if trainingClassInstance.trained == True:
+            trainingClassInstance.saveModel()
+            popupSave.dismiss()
 
     def but4Call(self, instance):
         # pop to select how to redict
@@ -269,12 +323,28 @@ class MainWindow(Screen):
         popup.open()
 
     def predictBrowse(self, instance):
-        path = filechooser.open_file(title="Pick a img file..")
-        if not path:
-            print("{}\nNO IMAGE CHOSEN!!!!\n{}".format("-" * 10, "-" * 10))
-            return False
-        os.chdir(currDirectory)
-        trainingClassInstance.predictWMOdel(path, "./saved_models/model9")
+
+        if trainingClassInstance.trained == False:
+            # if there is no model show notice
+            latestModelPath = trainingClassInstance.getLastModel()
+
+            if latestModelPath != False:
+                path = filechooser.open_file(title="Pick a img file..")
+                if not path:
+                    print("{}\nNO IMAGE CHOSEN!!!!\n{}".format("-" * 10, "-" * 10))
+                    return False
+                os.chdir(currDirectory)
+                trainingClassInstance.predictWMOdel(path, latestModelPath)
+            else:
+                print("there are no models available train one")
+                # pop up for this
+        else:
+            pathx = filechooser.open_file(title="Pick a img file..")
+            if not pathx:
+                print("{}\nNO IMAGE CHOSEN!!!!\n{}".format("-" * 10, "-" * 10))
+                return False
+            os.chdir(currDirectory)
+            trainingClassInstance.predict(pathx)
 
     def but5Call(self, instance):
         exit()
