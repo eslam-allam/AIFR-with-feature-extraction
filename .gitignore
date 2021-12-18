@@ -10,3 +10,5 @@ datasets/FGNET/.DS_Store
 *.pyc
 saved_models/model5_85/KNN_model
 dcaFuse/
+saved_models/model586/KNN_model
+*.jpg
