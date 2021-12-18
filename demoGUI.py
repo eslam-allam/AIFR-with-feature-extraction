@@ -36,10 +36,11 @@ import cv2
 from matplotlib import pyplot as plt
 import pandas as pd  # Import Pandas library
 import ctypes
-user32 = ctypes.windll.user32
-screensize = user32.GetSystemMetrics(0)*0.82, user32.GetSystemMetrics(1)*0.82
 
-Window.size = (screensize)
+user32 = ctypes.windll.user32
+screensize = user32.GetSystemMetrics(0) * 0.82, user32.GetSystemMetrics(1) * 0.82
+
+Window.size = screensize
 Window.top = int((pyautogui.size().height - Window.height)) / 2
 Window.left = int((pyautogui.size().width - Window.width)) / 2
 
@@ -528,6 +529,10 @@ class thirdWindow(Screen):
         toolBar.size_hint = (1, None)
         toolBar.height = "60dp"
 
+        toolBar2 = BoxLayout(orientation="horizontal")
+        toolBar2.size_hint = (1, None)
+        toolBar2.height = "60dp"
+
         ######################## display area ############################################################################## might need to add a remove to avoid any bugs
         self.midBox = BoxLayout(orientation="horizontal")
         if self.selectedImg is None:
@@ -629,25 +634,27 @@ class thirdWindow(Screen):
 
         imageSwapButtons = BoxLayout(
             orientation="horizontal",
-            size_hint=(None, None),
-            pos_hint={"center_x": 0.6, "center_y": 0.5},
-            width="500dp",
-            height="40dp",
+            # size_hint=(None, 1),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            # width="500dp",
+            # height="40dp",
         )
 
         orginalImage = Button(
             # size_hint=(None, None),
+            # size_hint=(None, 1),
             # pos_hint={"x": 0, "center_y": 0.5},
             # width="100dp",
             # height="40dp",
-            pos_hint={"center_x": 0.5, "center_y": 0.5},
-            size_hint=(0.5, 1),
+            # pos_hint={"center_x": 0.5, "center_y": 0.5},
+            # size_hint=(0.5, 1),
             text="Original",
         )
         orginalImage.bind(on_press=self.dispOG)
 
         imageAfterAnotation = Button(
             # size_hint=(None, None),
+            # size_hint=(None, 1),
             # pos_hint={"x": 0, "center_y": 0.5},
             # width="100dp",
             # height="40dp",
@@ -657,6 +664,7 @@ class thirdWindow(Screen):
 
         inageAfterPP = Button(
             # size_hint=(None, None),
+            # size_hint=(None, 1),
             # pos_hint={"x": 0, "center_y": 0.5},
             # width="100dp",
             # height="40dp",
@@ -669,8 +677,17 @@ class thirdWindow(Screen):
         imageSwapButtons.add_widget(inageAfterPP)
 
         toolBar.add_widget(backButton)
-        toolBar.add_widget(imageSwapButtons)
+        toolBar2.add_widget(imageSwapButtons)
         box.add_widget(toolBar)
+        tt = Label(
+            text="Image view:",
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            size_hint=(1, None),
+            height="40dp",
+            font_size="20sp",
+        )
+        box.add_widget(tt)
+        box.add_widget(toolBar2)
         box.add_widget(self.midBox)
         box.add_widget(self.bottomBar)
         # box.add_widget(uploadB)  #####################
@@ -704,6 +721,7 @@ class thirdWindow(Screen):
     def callback(self, instance):
         print("Button is pressed")
         print("The button % s state is <%s>" % (instance, instance.state))
+        os.chdir(currDirectory)
         self.manager.current = "main"
         self.manager.transition.direction = "right"
 
