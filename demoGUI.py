@@ -144,7 +144,7 @@ class MainWindow(Screen):
         but1.bind(on_press=self.but1Call)
 
         but2 = Button(
-            text="Add new set of images",
+            text="Add new images to the dataset",
             font_size="30sp",
             size_hint=(0.8, 0.9),
             pos_hint={"center_x": 0.5},
@@ -152,7 +152,7 @@ class MainWindow(Screen):
         but2.bind(on_press=self.but2Call)
 
         but3 = Button(
-            text="Re train the dnn",
+            text="Train on the current set",
             font_size="30sp",
             size_hint=(0.8, 0.9),
             pos_hint={"center_x": 0.5},
@@ -160,7 +160,7 @@ class MainWindow(Screen):
         but3.bind(on_press=self.but3Call)
 
         but4 = Button(
-            text="Run the dnn",
+            text="Predict a person",
             font_size="30sp",
             size_hint=(0.8, 0.9),
             pos_hint={"center_x": 0.5},
@@ -173,7 +173,7 @@ class MainWindow(Screen):
             size_hint=(0.8, 0.9),
             pos_hint={"center_x": 0.5},
         )
-        but5.bind(on_press=self.but5Call)
+        but5.bind(on_release=self.but5Call)
 
         rightSideGrid.add_widget(but1)
         rightSideGrid.add_widget(but2)
@@ -553,8 +553,8 @@ class thirdWindow(Screen):
 
         scrollTry = ScrollView(pos_hint={"center_x": 0.5, "center_y": 0.5})
 
-        FGnet_path = "./forDisplayTry/"
-        images_path = os.listdir(FGnet_path)
+        # FGnet_path = "./forDisplayTry/"
+        # images_path = os.listdir(FGnet_path)
 
         # the temp display
         """ counter69 = 0  # must be a method for this
@@ -853,7 +853,7 @@ kv = Builder.load_file("guiCode.kv")
 
 class myTryApp(App):
     def build(self):
-
+        self.title = "Age invariant face recognition Demo"
         # Window.clearcolor = (1, 1, 1, 1)
         return kv
 
