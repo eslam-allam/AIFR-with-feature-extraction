@@ -504,7 +504,8 @@ class SecondWindow(Screen):
                 fig.add_subplot(rows, columns, idx + 1)
                 plt.imshow(y)
                 plt.axis("off")
-                plt.title("First")
+                # plt.title("First")
+
             plt.show()
         except:
             print(xpic)
