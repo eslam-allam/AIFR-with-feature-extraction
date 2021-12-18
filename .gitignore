@@ -5,3 +5,8 @@ datasets/FGNET/points/083a17.pts
 *.dat
 datasets/FGNET/.DS_Store
 *.csv
+*.npy
+*.h5
+*.pyc
+saved_models/model5_85/KNN_model
+dcaFuse/

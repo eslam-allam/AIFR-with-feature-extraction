@@ -139,7 +139,7 @@ es = EarlyStopping(
     monitor="val_accuracy", mode="max", patience=15, restore_best_weights=True
 )
 steps = int(X_train.shape[0] / 32)
-model.fit(
+history = model.fit(
     X_train,
     y_train,
     epochs=50,
@@ -271,22 +271,43 @@ for i in range(0,len(y_test1)):
 #%%
 age_based_tally = age_based_tally.T
 age_based_tally.to_excel('Age_based_tally.xlsx')
+#%%
+accuracy_history = history.history['accuracy']
+val_accuraccy_history = history.history['val_accuracy']
+
+accuracy_df = pd.DataFrame(data=(accuracy_history,val_accuraccy_history))
+accuracy_df.index = ['accuracy','val accuracy']
+
+# summarize history for loss
+loss_history = history.history['loss']
+val_loss_history = history.history['val_loss']
+
+loss_df = pd.DataFrame(data=(loss_history,val_loss_history))
+loss_df.index = ['loss','val loss']
+
+accuracy_df = accuracy_df.T
+loss_df = loss_df.T
+
+accuracy_df.to_excel('Model_Accuracy.xlsx')
+loss_df.to_excel('Model_Loss.xlsx')
 
 
 
 
 # %%
-with open("./saved_models/model3/KNN_model", "wb") as f:
+model_location = './saved_models/model5_85/'
+os.makedirs(model_location,exist_ok=True)
+with open(model_location+"KNN_model", "wb") as f:
     pickle.dump(classifier, f)
-np.save("./saved_models/model3/Atransform1", Ax1)
-np.save("./saved_models/model3/Ytransform1", Ay1)
-np.save("./saved_models/model3/Atransform2", Ax2)
-np.save("./saved_models/model3/Ytransform2", Ay2)
-np.save("./saved_models/model3/Atransform3", Ax3)
-np.save("./saved_models/model3/Ytransform3", Ay3)
-m1.save("./saved_models/model3/fc1_model.h5")
-m2.save("./saved_models/model3/fc2_model.h5")
-pooling.save("./saved_models/model3/pooling_model.h5")
+np.save(model_location+"Atransform1", Ax1)
+np.save(model_location+"Ytransform1", Ay1)
+np.save(model_location+"Atransform2", Ax2)
+np.save(model_location+"Ytransform2", Ay2)
+np.save(model_location+"Atransform3", Ax3)
+np.save(model_location+"Ytransform3", Ay3)
+m1.save(model_location+"fc1_model.h5")
+m2.save(model_location+"fc2_model.h5")
+pooling.save(model_location+"pooling_model.h5")
 
 
 # %%
