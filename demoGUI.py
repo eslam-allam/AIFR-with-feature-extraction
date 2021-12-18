@@ -35,8 +35,11 @@ import pyautogui
 import cv2
 from matplotlib import pyplot as plt
 import pandas as pd  # Import Pandas library
+import ctypes
+user32 = ctypes.windll.user32
+screensize = user32.GetSystemMetrics(0)*0.82, user32.GetSystemMetrics(1)*0.82
 
-Window.size = (2000, 1000)
+Window.size = (screensize)
 Window.top = int((pyautogui.size().height - Window.height)) / 2
 Window.left = int((pyautogui.size().width - Window.width)) / 2
 
