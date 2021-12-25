@@ -37,12 +37,20 @@ from matplotlib import pyplot as plt
 import pandas as pd  # Import Pandas library
 import ctypes
 
+from kivymd.app import MDApp
+from kivymd.uix.floatlayout import MDFloatLayout
+from time import sleep
+from threading import Thread
+from functools import partial
+
+
 user32 = ctypes.windll.user32
 screensize = user32.GetSystemMetrics(0) * 0.82, user32.GetSystemMetrics(1) * 0.82
 
 Window.size = screensize
 Window.top = int((pyautogui.size().height - Window.height)) / 2
 Window.left = int((pyautogui.size().width - Window.width)) / 2
+
 
 """class BoxLayoutExample(BoxLayout):
     def __init__(self, **kwargs):
@@ -94,6 +102,12 @@ def imgCount():
     print(totalImages)
     print(len(collectingData))
     return totalImages, len(collectingData)
+
+
+class LoadingLayout(MDFloatLayout):
+    def on_touch_down(self, touch):  # Deactivate touch_down event
+        if self.collide_point(*touch.pos):
+            return True
 
 
 class MainWindow(Screen):
@@ -242,7 +256,7 @@ class MainWindow(Screen):
 
         back.bind(on_press=popupBut3.dismiss)
         rev.bind(on_press=self.revTModel)
-        conf.bind(on_press=self.trainSetOnClick)
+        conf.bind(on_press=partial(self.launch_thread, self.trainSetOnClick))
         # on_press=lambda y: self.disp(y=idx)
         popupBut3.open()
         # popup.dismiss()
@@ -251,7 +265,19 @@ class MainWindow(Screen):
         if trainingClassInstance.trained == True:
             trainingClassInstance.displayAllpredections()
 
-    def trainSetOnClick(self, instance):
+    ###################################################
+    def launch_thread(self, func, w=None):
+        popupBut3.dismiss()
+        self.add_widget(loading_layout)
+        Thread(target=self.my_thread, args=(func,), daemon=True).start()
+
+    def my_thread(self, func):
+        func()
+        self.remove_widget(loading_layout)
+
+    ###################################################
+
+    def trainSetOnClick(self):
         global popupSave
         popupBut3.dismiss()
 
@@ -873,10 +899,19 @@ class WindowManager(ScreenManager):
 kv = Builder.load_file("guiCode.kv")
 
 
-class myTryApp(App):
+class myTryApp(MDApp):
+    global loading_layout
+    loading_layout = None
+
+    def on_start(self):
+        global loading_layout
+        loading_layout = LoadingLayout()
+
     def build(self):
+
         self.title = "Age invariant face recognition Demo"
         # Window.clearcolor = (1, 1, 1, 1)
+
         return kv
 
 

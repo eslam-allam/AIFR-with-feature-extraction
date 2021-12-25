@@ -1,4 +1,10 @@
 WindowManager:
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
     MainWindow:
     SecondWindow:
     thirdWindow:
@@ -19,3 +25,14 @@ WindowManager:
 
 <thirdWindow>:
     name: "third"
+
+<LoadingLayout>
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    MDSpinner:
+        size_hint: .05, .05
+        pos_hint: {'center_x': .5, 'center_y': .5}
