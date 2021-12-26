@@ -338,7 +338,6 @@ class MainWindow(Screen):
         popupBut4 = Button(text="Cancel")
         content.add_widget(popupBut1)
         content.add_widget(popupBut2)
-        content.add_widget(popupBut3)
         content.add_widget(popupBut4)
         popup = Popup(
             title="Notice!!",
