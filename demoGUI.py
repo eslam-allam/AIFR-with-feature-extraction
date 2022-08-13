@@ -42,10 +42,19 @@ from kivymd.uix.floatlayout import MDFloatLayout
 from time import sleep
 from threading import Thread
 from functools import partial
+import subprocess
+import sys
 
+if sys.platform == 'linux':
+    screensize = subprocess.Popen('xrandr | grep "\*" | cut -d" " -f4',shell=True, stdout=subprocess.PIPE).communicate()[0]
+    if b'\n' in screensize:
+        screensize = screensize.split(b'\n', 1)[0]
+    screensize = screensize.split(b'x')
+    screensize[0], screensize[1] = float(screensize[0])*0.82, float(screensize[1])*0.82
+else:
+    user32 = ctypes.windll.user32
+    screensize = user32.GetSystemMetrics(0) * 0.82, user32.GetSystemMetrics(1) * 0.82
 
-user32 = ctypes.windll.user32
-screensize = user32.GetSystemMetrics(0) * 0.82, user32.GetSystemMetrics(1) * 0.82
 
 Window.size = screensize
 Window.top = int((pyautogui.size().height - Window.height)) / 2
@@ -544,11 +553,7 @@ class thirdWindow(Screen):
         self.selectedImg = None
 
         box = BoxLayout(
-            orientation="vertical",
-            padding=(10, 10),
-            # row_default_height="48dp",
-            # row_force_default=True,
-            spacing=(10, 10),
+            orientation="vertical"
         )
 
         toolBar = BoxLayout(orientation="horizontal")
@@ -590,12 +595,6 @@ class thirdWindow(Screen):
         # FGnet_path = "./forDisplayTry/"
         # images_path = os.listdir(FGnet_path)
 
-        # the temp display
-        """ counter69 = 0  # must be a method for this
-        for i in enumerate(images_path):
-            counter69 = counter69 + 1
-
-        scrollLength = (counter69 * 100) + ((counter69 - 1) * 20)"""
 
         scrollCounter = 0
         for i in self.imgsToSave:
