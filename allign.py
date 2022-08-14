@@ -13,7 +13,7 @@ mp_face_mesh = mp.solutions.face_mesh
 
 FINAL_DIMENSIONS = (224, 224)
 DATASET_DIRECTORY = './datasets/FGNET/images'
-PROCESSED_IMAGE_DIRECTORY = './datasets/FGNET/new_images'
+PROCESSED_IMAGE_DIRECTORY = './datasets/FGNET/newImages'
 
 
 
