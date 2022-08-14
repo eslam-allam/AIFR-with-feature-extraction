@@ -1,162 +1,151 @@
-from itertools import count
-import cv2 
-import numpy as np
+# install and import above modules first
 import os
-import matplotlib.pyplot as plt
+import cv2
+import math
+import matplotlib.pyplot as pl
+import pandas as pd
 from PIL import Image
-from pathlib import Path
+import numpy as np
+
+# Detect face
+def face_detection(img):
+	#faces = face_detector.detectMultiScale(img, 1.1, 4)
+	img = cv2.resize(img, (224, 224))
+	faces = detector.detect(img)
+	print(faces)
+	if (len(faces) <= 0):
+		img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+		return img, img_gray
+	else:
+		X, Y, W, H = faces[0]
+		img = img[int(Y):int(Y+H), int(X):int(X+W)]
+		return img, cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
 
 
+def trignometry_for_distance(a, b):
+	return math.sqrt(((b[0] - a[0]) * (b[0] - a[0])) +\
+					((b[1] - a[1]) * (b[1] - a[1])))
 
+# Find eyes
+def Face_Alignment(img_path):
+	img_raw = cv2.imread(img_path).copy()
+	img, gray_img = face_detection(cv2.imread(img_path))
+	eyes = eye_detector.detectMultiScale(gray_img)
 
+	# for multiple people in an image find the largest
+	# pair of eyes
+	if len(eyes) >= 2:
+		eye = eyes[:, 2]
+		container1 = []
+		for i in range(0, len(eye)):
+			container = (eye[i], i)
+			container1.append(container)
+		df = pd.DataFrame(container1, columns=[
+						"length", "idx"]).sort_values(by=['length'])
+		eyes = eyes[df.idx.values[0:2]]
 
-'''def hisEqulColor(img):
-    ycrcb=cv2.cvtColor(img,cv2.COLOR_BGR2YCR_CB)
-    channels=cv2.split(ycrcb)
-    cv2.equalizeHist(channels[0],channels[0])
-    cv2.merge(channels,ycrcb)
-    cv2.cvtColor(ycrcb,cv2.COLOR_YCR_CB2RGB,img)
-    return img'''
+		# deciding to choose left and right eye
+		eye_1 = eyes[0]
+		eye_2 = eyes[1]
+		if eye_1[0] > eye_2[0]:
+			left_eye = eye_2
+			right_eye = eye_1
+		else:
+			left_eye = eye_1
+			right_eye = eye_2
 
+		# center of eyes
+		# center of right eye
+		right_eye_center = (
+			int(right_eye[0] + (right_eye[2]/2)),
+		int(right_eye[1] + (right_eye[3]/2)))
+		right_eye_x = right_eye_center[0]
+		right_eye_y = right_eye_center[1]
+		cv2.circle(img, right_eye_center, 2, (255, 0, 0), 3)
 
+		# center of left eye
+		left_eye_center = (
+			int(left_eye[0] + (left_eye[2] / 2)),
+		int(left_eye[1] + (left_eye[3] / 2)))
+		left_eye_x = left_eye_center[0]
+		left_eye_y = left_eye_center[1]
+		cv2.circle(img, left_eye_center, 2, (255, 0, 0), 3)
 
-FGnet_path = './datasets/FGNET/images/'
-newPath ='./datasets/FGNET/newImages/'
-FGnet_points_path = './datasets/FGNET/points/'
+		# finding rotation direction
+		if left_eye_y > right_eye_y:
+			print("Rotate image to clock direction")
+			point_3rd = (right_eye_x, left_eye_y)
+			direction = -1 # rotate image direction to clock
+		else:
+			print("Rotate to inverse clock direction")
+			point_3rd = (left_eye_x, right_eye_y)
+			direction = 1 # rotate inverse direction of clock
 
-# make new images directory if it doesnt exist
-Path(newPath).mkdir(parents=True, exist_ok=True)
+		cv2.circle(img, point_3rd, 2, (255, 0, 0), 2)
+		a = trignometry_for_distance(left_eye_center,
+									point_3rd)
+		b = trignometry_for_distance(right_eye_center,
+									point_3rd)
+		c = trignometry_for_distance(right_eye_center,
+									left_eye_center)
+		cos_a = (b*b + c*c - a*a)/(2*b*c)
+		angle = (np.arccos(cos_a) * 180) / math.pi
 
-images_path = os.listdir(FGnet_path)
-imagePoints_path = os.listdir(FGnet_points_path)
+		if direction == -1:
+			angle = 90 - angle
+		else:
+			angle = -(90-angle)
 
+		# rotate image
+		new_img = Image.fromarray(img_raw)
+		new_img = np.array(new_img.rotate(direction * angle))
 
-cascPathface = os.path.dirname(
-    cv2.__file__) + "/data/haarcascade_frontalface_alt2.xml"
+	return new_img
 
-cascPatheye = os.path.dirname(
-    cv2.__file__) + "/data/haarcascade_eye.xml"
-
-face_cascade=cv2.CascadeClassifier(cascPathface)
-eye_cascade=cv2.CascadeClassifier(cascPatheye)
-
-
-#should be deleted i think
-counter = 0
-ess = []
-allFacesRotated = []
-#############################
-for i,path in enumerate(images_path):
-    
-    img = cv2.imread(FGnet_path+path)
-    
-    points = np.loadtxt(FGnet_points_path+imagePoints_path[i],comments=("version:", "n_points:", "{", "}"))
-    points = points.astype('int32')
-
-    # Calculating coordinates of a central points of the rectangles
-    left_eye_center = points[31]
-    left_eye_x = left_eye_center[0] 
-    left_eye_y = left_eye_center[1]
-
-    right_eye_center = points[36]
-    right_eye_x = right_eye_center[0]
-    right_eye_y = right_eye_center[1]
-
-   
-
-    #should be deleted i think
-    chin = points[7]
-    chinx = chin[0]
-    chiny= chin[1]
-    ######################
-
-
-
-    #should be deleted i think v2
-    if left_eye_y > right_eye_y:
-        A = (right_eye_x, left_eye_y)
-        # Integer -1 indicates that the image will rotate in the clockwise direction
-        direction = -1 
-    else:
-        A = (left_eye_x, right_eye_y)
-        # Integer 1 indicates that image will rotate in the counter clockwise  
-        # direction
-        direction = 1 
-    ######################
-
-
-    delta_x = right_eye_x - left_eye_x
-    delta_y = right_eye_y - left_eye_y
-    angle=np.arctan(delta_y/delta_x)
-    angle = (angle * 180) / np.pi
-
-    # Width and height of the image
-    h, w = img.shape[:2]
-    # Calculating a center point of the image
-    # Integer division "//"" ensures that we receive whole numbers
-    center = (w // 2, h // 2)
-    # Defining a matrix M and calling
-    # cv2.getRotationMatrix2D method
-    M = cv2.getRotationMatrix2D(center, (angle), 1.0)
-    # Applying the rotation to our image using the
-    # cv2.warpAffine method
-    rotated = cv2.warpAffine(img, M, (w, h))
-
-
-    #should be deleted i think
-    allFacesRotated.append(rotated)
-    ########################################
-
-    gray = cv2.cvtColor(rotated, cv2.COLOR_BGR2GRAY)
-
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-    
-    right = points[0][0]
-    left = points[0][0]
-    up = points[0][1]
-    down = points[0][1]
-    for x in range(64):
-        if(right<points[x][0]):
-            right = points[x][0]
-        if(left>points[x][0]):
-            left = points[x][0]
-        if(up>points[x][1]):
-            up = points[x][1]
-        if(down<points[x][1]):
-            down = points[x][1]
-    #print(faces)
-    if(faces == ()):
-        
-            
-        gray = gray[up-50:down, left:right]
-        counter = counter + 1
-        
-    else:
-        for (x,y,w,h) in faces:
-            counter = counter + 1
-        
-        
-            gray = gray[y:down, left:right]
-
-    # are we using clahe ??? doesn't have .apply 
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    ################ 
-
-    equ = cv2.equalizeHist(gray)
+def process_image(img):
     dim = (224, 224)
-    resized = cv2.resize(equ, dim, interpolation = cv2.INTER_AREA)
-    #print(resized.shape) should be deleted
-
-
-
-    im = Image.fromarray(resized)
-    
-    #should be deleted
-    newName = path.split("A")
-    ####################
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.equalizeHist(gray)
+    gray = cv2.resize(gray, dim, interpolation = cv2.INTER_AREA)
+    return gray
     
 
-    im.save(newPath+path)
-    #cv2.imshow('img',resized) #remove if u want to save all imgs
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
+
+opencv_home = cv2.__file__
+folders = opencv_home.split(os.path.sep)[0:-1]
+path = folders[0]
+for folder in folders[1:]:
+	path = path + "/" + folder
+path_for_face = path+"/data/haarcascade_frontalface_alt2.xml"
+path_for_eyes = path+"/data/haarcascade_eye.xml"
+path_for_nose = path+"/data/haarcascade_mcs_nose.xml"
+
+modelFile = "models/face_detection_yunet_2022mar-act_int8-wt_int8-quantized.onnx"
+detector = cv2.FaceDetectorYN.create(
+        modelFile,
+        "",
+        (320, 320),
+        0.9,
+        0.3,
+        5000
+    )
+detector.setInputSize((224, 224))
+
+face_detector = cv2.CascadeClassifier(path_for_face)
+eye_detector = cv2.CascadeClassifier(path_for_eyes)
+nose_detector = cv2.CascadeClassifier(path_for_nose)
+
+# Name of the image for face alignment if on
+# the other folder kindly paste the name of
+# the image with path included
+test_set = ["./datasets/FGNET/images/001A05.JPG"]
+for i in test_set:
+    alignedFace = Face_Alignment(i)
+    pl.imshow(alignedFace[:, :, ::-1])
+    pl.show()
+    img, gray_img = face_detection(alignedFace)
+    pl.imshow(img[:, :, ::-1])
+    pl.show()
+    img = process_image(img)
+    pl.imshow(img,cmap='gray')
+    pl.show()
