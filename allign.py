@@ -6,19 +6,27 @@ import matplotlib.pyplot as pl
 import pandas as pd
 from PIL import Image
 import numpy as np
+import mediapipe as mp
+from mediapipe.python.solutions.drawing_utils import _normalized_to_pixel_coordinates as normalizeCoardinates
+
 
 # Detect face
-def face_detection(img):
-	#faces = face_detector.detectMultiScale(img, 1.1, 4)
+def face_detection(img, thickness=2):
 	img = cv2.resize(img, (224, 224))
 	faces = detector.detect(img)
-	print(faces)
-	if (len(faces) <= 0):
+	assert faces[1] is not None, 'Cannot find face in image'
+	if faces[1] is None:
 		img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		return img, img_gray
 	else:
-		X, Y, W, H = faces[0]
-		img = img[int(Y):int(Y+H), int(X):int(X+W)]
+		coords = faces[1][0][:-1].astype(np.int32)
+		top_left, width, hight, score = coords[0:2], coords[2], coords[3], coords[-1]
+		'''cv2.circle(img, (coords[4], coords[5]), 2, (255, 0, 0), thickness)
+		cv2.circle(img, (coords[6], coords[7]), 2, (0, 0, 255), thickness)
+		cv2.circle(img, (coords[8], coords[9]), 2, (0, 255, 0), thickness)
+		cv2.circle(img, (coords[10], coords[11]), 2, (255, 0, 255), thickness)
+		cv2.circle(img, (coords[12], coords[13]), 2, (0, 255, 255), thickness)'''
+		img = img[top_left[1]:top_left[1]+hight, top_left[0]:top_left[0]+width]
 		return img, cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
 
 
@@ -30,7 +38,9 @@ def trignometry_for_distance(a, b):
 def Face_Alignment(img_path):
 	img_raw = cv2.imread(img_path).copy()
 	img, gray_img = face_detection(cv2.imread(img_path))
+	gray_img = process_image(gray_img)
 	eyes = eye_detector.detectMultiScale(gray_img)
+	
 
 	# for multiple people in an image find the largest
 	# pair of eyes
@@ -103,10 +113,10 @@ def Face_Alignment(img_path):
 	return new_img
 
 def process_image(img):
-    dim = (224, 224)
+    #dim = (224, 224)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)
-    gray = cv2.resize(gray, dim, interpolation = cv2.INTER_AREA)
+    #gray = cv2.resize(gray, dim, interpolation = cv2.INTER_AREA)
     return gray
     
 
@@ -133,12 +143,19 @@ detector.setInputSize((224, 224))
 
 face_detector = cv2.CascadeClassifier(path_for_face)
 eye_detector = cv2.CascadeClassifier(path_for_eyes)
-nose_detector = cv2.CascadeClassifier(path_for_nose)
+
+mp_face_detection = mp.solutions.face_detection
+mp_face = mp.solutions.face_detection.FaceDetection(
+    model_selection=1,  # model selection
+    min_detection_confidence=0.5  # confidence threshold
+)
+
+
 
 # Name of the image for face alignment if on
 # the other folder kindly paste the name of
 # the image with path included
-test_set = ["./datasets/FGNET/images/001A05.JPG"]
+test_set = ["./datasets/FGNET/images/001A16.JPG"]
 for i in test_set:
     alignedFace = Face_Alignment(i)
     pl.imshow(alignedFace[:, :, ::-1])
