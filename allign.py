@@ -11,23 +11,27 @@ from mediapipe.python.solutions.drawing_utils import _normalized_to_pixel_coordi
 
 
 # Detect face
-def face_detection(img, thickness=2):
-	img = cv2.resize(img, (224, 224))
-	faces = detector.detect(img)
-	assert faces[1] is not None, 'Cannot find face in image'
-	if faces[1] is None:
-		img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-		return img, img_gray
-	else:
-		coords = faces[1][0][:-1].astype(np.int32)
-		top_left, width, hight, score = coords[0:2], coords[2], coords[3], coords[-1]
-		'''cv2.circle(img, (coords[4], coords[5]), 2, (255, 0, 0), thickness)
-		cv2.circle(img, (coords[6], coords[7]), 2, (0, 0, 255), thickness)
-		cv2.circle(img, (coords[8], coords[9]), 2, (0, 255, 0), thickness)
-		cv2.circle(img, (coords[10], coords[11]), 2, (255, 0, 255), thickness)
-		cv2.circle(img, (coords[12], coords[13]), 2, (0, 255, 255), thickness)'''
-		img = img[top_left[1]:top_left[1]+hight, top_left[0]:top_left[0]+width]
-		return img, cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
+def face_detection(img):
+	results = mp_face.process(img)
+	detection = results.detections[0]
+
+	eye_left=mp_face_detection.get_key_point(detection, mp_face_detection.FaceKeyPoint.LEFT_EYE)
+	eye_right=mp_face_detection.get_key_point(detection, mp_face_detection.FaceKeyPoint.RIGHT_EYE)
+
+	image_cols = img.shape[1]
+	image_rows = img.shape[0]
+	eye_right = normalizeCoardinates(eye_right.x,eye_right.y, image_cols,image_rows)
+	eye_left = normalizeCoardinates(eye_left.x,eye_left.y, image_cols,image_rows)
+
+	cv2.circle(img, eye_right, color=(255,0,0), radius=2, thickness=20)
+	cv2.circle(img, eye_left, color=(255,0,0), radius=2, thickness=20)
+
+	pl.imshow(img[:,:,::-1])
+	pl.show()
+
+	print(f'left eye: {eye_left}\nright eye: {eye_right}')
+	#img = img[top_left[1]:top_left[1]+hight, top_left[0]:top_left[0]+width]
+	return img, cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
 
 
 def trignometry_for_distance(a, b):
