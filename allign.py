@@ -1,9 +1,11 @@
 # IMPORTING LIBRARIES
+from asyncore import read
 import cv2
 import mediapipe as mp
 import numpy as np
 import os
 from tqdm import tqdm as meter
+import sys
 
 
 
@@ -118,21 +120,51 @@ def proccess_image(image):
         return image
 
 
-images_list = os.listdir(DATASET_DIRECTORY)
+def main(single_image=False, dataset_directory=DATASET_DIRECTORY, processed_image_directory=PROCESSED_IMAGE_DIRECTORY, image_name=None):
 
-for image_name in meter(images_list):
-    path = DATASET_DIRECTORY+'/'+image_name
-    new_path = PROCESSED_IMAGE_DIRECTORY+'/'+image_name
-    image = cv2.imread(path).copy()
-    image = proccess_image(image)
+    if not single_image:
+        images_list = os.listdir(dataset_directory)
 
-    if not os.path.exists(PROCESSED_IMAGE_DIRECTORY): os.mkdir(PROCESSED_IMAGE_DIRECTORY)
+        for name in meter(images_list):
+            path = dataset_directory+'/'+name
+            new_path = processed_image_directory+'/'+name
+            image = cv2.imread(path).copy()
+            image = proccess_image(image)
+
+            if not os.path.exists(processed_image_directory): os.mkdir(processed_image_directory)
+                
+            cv2.imwrite(new_path, image)
+    else:
+            assert image_name, 'Single image mode requires passing "image_name" argument.'
+            path = dataset_directory+'/'+image_name
+            new_path = processed_image_directory+'/'+image_name
+            image = cv2.imread(path).copy()
+            image = proccess_image(image)
+
+            if not os.path.exists(processed_image_directory): os.mkdir(processed_image_directory)
+                
+            cv2.imwrite(new_path, image)
+
+args = sys.argv
+
+assert not('--one-image' in args and '--from-directory' in args), 'Cannot use one-image and from-directory modes at the same time'
+
+if '--cli' in args:
+    src_directory = input(f'Enter source image directory excluding filename(If empty {DATASET_DIRECTORY} will be used): ')
+    if not src_directory: src_directory = DATASET_DIRECTORY
+
+    out_directory = input(f'Enter output directory excluding file name (if empty {PROCESSED_IMAGE_DIRECTORY} will be used): ')
+    if not out_directory: out_directory = PROCESSED_IMAGE_DIRECTORY
+
+    if '--one-image' in args:
+        name = input('Enter image name (This field is mandatory): ')
+        assert name, 'You must provide a name for the image'
+        main(single_image=True, dataset_directory=src_directory, processed_image_directory=out_directory, image_name=name)
+
+    elif '--from-directory' in args:
+        main(dataset_directory=src_directory, processed_image_directory=out_directory)
+
         
-    cv2.imwrite(new_path, image)
 
+        
 
-
-    '''cv2.imshow('image',image)
-    k = cv2.waitKey(0)
-    if k == ord('w'): continue
-    elif k == ord('q'): break'''
