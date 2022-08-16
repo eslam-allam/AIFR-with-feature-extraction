@@ -150,6 +150,8 @@ args = sys.argv
 assert not('--one-image' in args and '--from-directory' in args), 'Cannot use one-image and from-directory modes at the same time'
 
 if '--cli' in args:
+    assert '--one-image' in args or '--from-directory' in args, 'CLI mode must be used with either --one-image or --from-directory.'
+    
     src_directory = input(f'Enter source image directory excluding filename(If empty {DATASET_DIRECTORY} will be used): ')
     if not src_directory: src_directory = DATASET_DIRECTORY
 
