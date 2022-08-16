@@ -25,6 +25,9 @@ from keras_vggface.vggface import VGGFace
 from tensorflow.keras import regularizers
 from tensorflow.keras.callbacks import LearningRateScheduler
 
+from tqdm import tqdm as meter
+import logging
+
 import pickle
 
 
@@ -41,66 +44,68 @@ def lr_schedule(epoch):
     return lrate
 
 
-image_directory = "./datasets/FGNET/newImages/"
-image_list = os.listdir(image_directory)
+DATASET_DIRECTORY = "./datasets/FGNET/newImages/"
+DATASET_SHAPE = (1002 ,224, 224, 3)
+NUM_OF_CLASSES = 82
 
-images_array = np.ndarray(
-    (1002, 224, 224, 3), dtype="int32"
-)  ##################################
-labels = []  ##################################
-y_test_ages = []
-# fill image and label arrays
-for i, image in enumerate(image_list):
-    temp_image = cv2.imread(image_directory + image)
-    images_array[i] = temp_image
-    label = image[0:6]
-    labels.append(label)
+def load_dataset(directory=DATASET_DIRECTORY, data_shape=DATASET_SHAPE, num_classes=NUM_OF_CLASSES):
+    image_list = os.listdir(DATASET_DIRECTORY)
+
+    images_array = np.ndarray(
+        DATASET_SHAPE, dtype="int32"
+    )  ##################################
+    labels = []  ##################################
+    y_test_ages = []
+    # fill image and label arrays
+
+    for i, image in enumerate(image_list):
+        temp_image = cv2.imread(DATASET_DIRECTORY + image)
+        images_array[i] = temp_image
+        label = image[0:6]
+        labels.append(label)
 
 
-# split the data into train and test
-X_train, X_test, y_train1, y_test1 = train_test_split(
-    images_array, labels, test_size=0.20, random_state=33
-)
+    # split the data into train and test
+    x_train, x_test, y_train, y_test = train_test_split(
+        images_array, labels, test_size=0.20, random_state=33
+    )
 
-for i, y in enumerate(y_train1):
-    y_train1[i] = int(y[0:3]) - 1
+    for i, y in enumerate(y_train):
+        y_train[i] = int(y[0:3]) - 1
 
-for i, y in enumerate(y_test1):
-    y_test1[i] = int(y[0:3]) - 1
-    y_test_ages.append(int(y[4:6]))
+    for i, y in enumerate(y_test):
+        y_test[i] = int(y[0:3]) - 1
+        y_test_ages.append(int(y[4:6]))
 
-y_train1 = np.array(y_train1)
-y_test1 = np.array(y_test1)
-labels = np.array(labels)
-# freeing memory
-del (
-    labels,
-    temp_image,
-    images_array,
-    label,
-    image,
-    image_directory,
-    image_list,
-)
+    y_train = np.array(y_train)
+    y_test = np.array(y_test)
+    labels = np.array(labels)
+    
+    
 
-numClasses = 82  ##################################
+    
 
-y_train = tf.keras.utils.to_categorical(
-    y_train1, num_classes=numClasses, dtype="float32"
-)
+    y_train_categorical = tf.keras.utils.to_categorical(
+        y_train, num_classes=num_classes, dtype="float32"
+    )
+    y_test_categorical = tf.keras.utils.to_categorical(y_test, num_classes=num_classes, dtype="float32")
+    
+    x_train = x_train.astype("float32")
+    x_test = x_test.astype("float32")
 
-y_test = tf.keras.utils.to_categorical(y_test1, num_classes=numClasses, dtype="float32")
-X_train = X_train.astype("float32")
-X_test = X_test.astype("float32")
+    x_train = utils.preprocess_input(x_train, version=2)
+    x_test = utils.preprocess_input(x_test, version=2)
+    
+    return x_train, y_train, x_test, y_test, y_train_categorical, y_test_categorical
 
-X_train = utils.preprocess_input(X_train, version=2)
-X_test = utils.preprocess_input(X_test, version=2)
-
-print(X_train.shape)
-print(y_train.shape)
+x_train, y_train, x_test, y_test, y_train_categorical, y_test_categorical = load_dataset()
+print(f'x_train shape: {x_train.shape} | y_train shape: {y_train.shape}\nx_test shape: {x_test.shape} | y_test shape: {y_test.shape}')
 
 
 #%%
+
+
+
 base_model = VGGFace(
     model="senet50", include_top=True, input_shape=(224, 224, 3), pooling="avg"
 )
@@ -138,10 +143,10 @@ model.compile(
 es = EarlyStopping(
     monitor="val_accuracy", mode="max", patience=15, restore_best_weights=True
 )
-steps = int(X_train.shape[0] / 32)
+steps = int(x_train.shape[0] / 32)
 history = model.fit(
-    X_train,
-    y_train,
+    x_train,
+    y_train_categorical,
     epochs=50,
     batch_size=32,
     callbacks=[es, LearningRateScheduler(lr_schedule)],
@@ -154,16 +159,16 @@ history = model.fit(
 #%%
 
 m1 = Model(inputs=model.input, outputs=model.get_layer("fc1").output)
-fc1_train = m1.predict(X_train)
-fc1_test = m1.predict(X_test)
+fc1_train = m1.predict(x_train)
+fc1_test = m1.predict(x_test)
 
 m2 = Model(inputs=model.input, outputs=model.get_layer("fc2").output)
-fc2_train = m1.predict(X_train)
-fc2_test = m1.predict(X_test)
+fc2_train = m1.predict(x_train)
+fc2_test = m1.predict(x_test)
 
 pooling = Model(inputs=model.input, outputs=model.get_layer("flatten").output)
-pooling_train = pooling.predict(X_train)
-pooling_test = pooling.predict(X_test)
+pooling_train = pooling.predict(x_train)
+pooling_test = pooling.predict(x_test)
 
 
 fc1_train = fc1_train.T
@@ -177,12 +182,12 @@ pooling_test = pooling_test.T
 #%%
 print("vector 1 shape :", fc1_train.shape)
 print("vector 2 shape :", fc2_train.shape)
-print("Labels shape: ", y_train1.shape)
+print("Labels shape: ", y_train.shape)
 
 #%%
 
 
-Xs, Ys, Ax1, Ay1 = dcaFuse(fc1_train, fc2_train, y_train1)
+Xs, Ys, Ax1, Ay1 = dcaFuse(fc1_train, fc2_train, y_train)
 fused_vector1 = np.concatenate((Xs, Ys))
 
 testX = np.matmul(Ax1, fc1_test)
@@ -193,7 +198,7 @@ print("fused_vector1: ", fused_vector1.shape)
 print("test_vector1: ", test_vector1.shape)
 
 
-Xs, Ys, Ax2, Ay2 = dcaFuse(fc1_train, pooling_train, y_train1)
+Xs, Ys, Ax2, Ay2 = dcaFuse(fc1_train, pooling_train, y_train)
 fused_vector2 = np.concatenate((Xs, Ys))
 
 testX = np.matmul(Ax2, fc1_test)
@@ -203,7 +208,7 @@ test_vector2 = np.concatenate((testX, testY))
 print("fused_vector2: ", fused_vector2.shape)
 print("test_vector2: ", test_vector2.shape)
 
-Xs, Ys, Ax3, Ay3 = dcaFuse(fused_vector2, fused_vector2, y_train1)
+Xs, Ys, Ax3, Ay3 = dcaFuse(fused_vector2, fused_vector2, y_train)
 fused_vector3 = np.concatenate((Xs, Ys))
 
 print("fused_vector3: ", fused_vector3.shape)
@@ -235,18 +240,18 @@ test_vector = test_vector3.T
 from sklearn.neighbors import KNeighborsClassifier
 
 classifier = KNeighborsClassifier(n_neighbors=5)
-classifier.fit(fused_vector, y_train1)
+classifier.fit(fused_vector, y_train)
 
 
 #%%
 from sklearn import metrics
 spacer = 35*"-"
 # Model Accuracy, how often is the classifier correct?
-predicted = np.argmax(model.predict(X_test), axis=-1)
-print("{}\nDNN Accuracy: {}\n{}".format(spacer,metrics.accuracy_score(y_test1, predicted),spacer))
+predicted = np.argmax(model.predict(x_test), axis=-1)
+print("{}\nDNN Accuracy: {}\n{}".format(spacer,metrics.accuracy_score(y_test, predicted),spacer))
 
 predicted = classifier.predict(test_vector)
-print("DCA Accuracy: {}\n{}".format(metrics.accuracy_score(y_test1, predicted),spacer))
+print("DCA Accuracy: {}\n{}".format(metrics.accuracy_score(y_test, predicted),spacer))
 
 
 
