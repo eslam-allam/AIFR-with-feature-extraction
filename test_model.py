@@ -27,10 +27,8 @@ def unison_shuffled_copies(a, b):
     return a[p], b[p]
 
 
-m1 = tf.keras.models.load_model('saved_models\model4/fc1_model.h5')
-m2 = tf.keras.models.load_model('saved_models\model4/fc2_model.h5')
-pooling = tf.keras.models.load_model('saved_models\model4/pooling_model.h5')
-
+with open('saved_models/model11_accuracy_86.07/compressed_models.pcl', 'rb') as f:
+    m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
 
 image_directory = './datasets/FGNET/newImages/'
 image_list = os.listdir(image_directory)
@@ -61,17 +59,6 @@ fc2 = fc2.T
 pooling = pooling.T
 
 
-
-Ax1 = np.load('saved_models\model4\Atransform1.npy')
-Ay1 = np.load('saved_models\model4\Ytransform1.npy')
-
-Ax2 = np.load('saved_models\model4\Atransform2.npy')
-Ay2 = np.load('saved_models\model4\Ytransform2.npy')
-
-Ax3 = np.load('saved_models\model4\Atransform3.npy')
-Ay3 = np.load('saved_models\model4\Ytransform3.npy')
-
-
 testX = np.matmul(Ax1,fc1)
 testY = np.matmul(Ay1, fc2)
 test_vector1 = np.concatenate((testX,testY))
@@ -85,13 +72,6 @@ testY = np.matmul(Ay3, test_vector2)
 test_vector3 = np.concatenate((testX,testY))
 
 test_vector = test_vector3.T
-
-
-
-
-with open('saved_models\model4\KNN_model', 'rb') as f:
-
-    classifier = pickle.load(f)
 
 
 predicted = classifier.predict(test_vector)
@@ -163,7 +143,7 @@ for i,image in enumerate(images_array):
     mng = plt.get_current_fig_manager()
 
     # comment the next line if you are using ipyKernel/jupyter notebook!(Interactive shell)
-    mng.window.state('zoomed')
+    #mng.window.state('zoomed')
     plt.show()
 
 

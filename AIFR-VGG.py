@@ -3,7 +3,8 @@ import argparse
 parser = argparse.ArgumentParser(description='Train and save a DNN-MDCA model using a dataset from directory. The input images must have a shape of (224, 224, 3) and prefereably preprocessed adequatily.')
 parser.add_argument('-l','--loop', required=False, action='store_true', help='loop program until desired accuracy is reached')
 parser.add_argument('-es','--early-stop', required=False, action='store_true', help='stop the training early if the accuracy is not improving')
-parser.add_argument('-ne','--no-excel', required=False, action='store_false', help="don't save stats to excel files")
+parser.add_argument('-ne','--no-excel', required=False, action='store_true', help="don't save stats to excel files")
+parser.add_argument('-s','--model-summary', required=False, action='store_true', help="Print summary of built TF model")
 parser.add_argument('-bc','--bot-config', metavar='\b', required=False, help="Modify bot configuration file location.")
 parser.add_argument('-nt','--notify-telegram', required=False, action='store_true', help="send telegram notification when training is finished")
 parser.add_argument('-kn','--knn-neighbors', metavar='\b', required=False, type=int, help='number of KNN neighbors')
@@ -63,7 +64,7 @@ DATASET_DIRECTORY = "./datasets/FGNET/newImages/"
 DATASET_SHAPE = (1002 ,224, 224, 3)
 NUM_OF_CLASSES = 82
 MODEL_SAVE_DIRECTORY = './saved_models/'
-SAVE_MODEL_ACCURACY_THRESHOLD = 0.86
+SAVE_MODEL_ACCURACY_THRESHOLD = 0.82
 BOT_CONFIG_PATH = './bot_config.txt'
 
 
@@ -148,8 +149,14 @@ def build_model(x_train, y_train,epochs=50, early_stop=True, variable_lr=True, b
     predictions = Dense(82, activation="softmax")(drop)  
     model = Model(inputs=base_model.input, outputs=predictions)
 
-   
-    if model_summary: model.summary()
+    
+    if model_summary: 
+        summary_lines = []
+        model.summary(print_fn=lambda x: summary_lines.append(x))
+        summary_lines = '\n'.join(summary_lines)
+        mylogs.info(f'MODEL SUMMARY:\n{summary_lines}')
+
+    
 
     model.compile(
         optimizer="adam",
@@ -284,10 +291,9 @@ def save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accura
 
     model_location = save_directory+model_name
     os.makedirs(model_location,exist_ok=False)
-    models = [m1, m2, pooling, classifier]
+    models = [m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier]
     with open(model_location+'/compressed_models.pcl', "wb") as f:
         pickle.dump(models, f)
-    np.savez(model_location+"/x_y_transforms", Ax1, Ax2, Ax3, Ay1, Ay2, Ay3)
 
     if save_excel_stats:
         assert y_test_ages is not None and predicted is not None and history is not None and y_test is not None, 'y_test_ages, predicted, history, y_test are required to generate model stats'
@@ -324,7 +330,7 @@ def  notify_telegram(model_name=None, accuracy=None, telegram_bot_token=None, te
             
             mylogs.info('SETUP FILE CREATED SUCCESSFULLY') 
             
-    if init: return  
+    if init: return  telegram_bot_token, telegram_chatID
 
     assert model_name and accuracy, f"Invalid values for model_name, accuraccy = '{model_name}', '{accuracy}'"
     response = requests.get('https://api.telegram.org/bot{}/sendMessage'.format(telegram_bot_token),params={'text':f'Your model "{model_name}" has finished training with an accracy of: {accuracy*100:.2f}%','chat_id': '{}'.format(telegram_chatID)})
@@ -339,11 +345,11 @@ def  notify_telegram(model_name=None, accuracy=None, telegram_bot_token=None, te
         mylogs.warning('**********************STATUS:NO OK**********************')
         mylogs.warning('MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID')
 
-def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD):
+def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD, model_summary=False):
     x_train, y_train, x_test, y_test, y_train_categorical, y_test_categorical, y_test_ages = load_dataset()
 
     while True:
-        model, history = build_model(x_train, y_train_categorical, early_stop=early_stop)
+        model, history = build_model(x_train, y_train_categorical, early_stop=early_stop, model_summary=model_summary)
         fused_vector, test_vector, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(x_train, x_test,y_train, model)
 
         classifier = KNeighborsClassifier(n_neighbors=KNN_neighbors)
@@ -373,7 +379,7 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
 
 
         
-loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD
+loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD, False
 if args.early_stop:
     early_stop = True
 if args.no_excel:
@@ -382,8 +388,11 @@ if args.knn_neighbors:
     KNN_neighbors = args.knn_neighbors
 if args.save_directory:
     save_directory = args.save_directory
+if args.model_summary:
+    model_summary = True
 if args.loop:
     loop = True
+if args.accuracy_threshold:
     accuracy_threshold = args.accuracy_threshold
     
 mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
@@ -395,9 +404,11 @@ mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
 
 if args.notify_telegram: 
     mylogs.info('TELEGRAM NOTIFICATION ENABLED BY USER. STARTING CONFIG.')
-    notify_telegram(init=True)
-model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold)
-if args.notify_telegram: notify_telegram(model_name, accuracy)
+    telegram_bot_token, telegram_chatID = notify_telegram(init=True)
+
+model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary)
+
+if args.notify_telegram: notify_telegram(model_name, accuracy, telegram_bot_token=telegram_bot_token, telegram_chatID=telegram_chatID)
 
 
     
