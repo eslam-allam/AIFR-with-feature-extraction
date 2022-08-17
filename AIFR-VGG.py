@@ -1,3 +1,15 @@
+import argparse
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('-l','--loop', required=False, action='store_true', help='loop program until desired accuracy is reached')
+parser.add_argument('-es','--early-stop', required=False, action='store_true', help='stop the training early if the accuracy is not improving')
+parser.add_argument('-ne','--no-excel', required=False, action='store_false', help="don't save stats to excel files")
+parser.add_argument('-nt','--notify-telegram', required=False, action='store_true', help="send telegram notification when training is finished")
+parser.add_argument('-kn','--knn-neighbors', required=False, type=int, help='number of KNN neighbors')
+parser.add_argument('-sd','--save-directory', required=False, type=str, help='Directory to save models')
+parser.add_argument('-at','--accuracy-threshold', required=False, type=float, help='Min accuracy to stop the loop')
+args = parser.parse_args()
+
 import tensorflow as tf
 from keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
@@ -15,7 +27,31 @@ from tensorflow.keras.callbacks import LearningRateScheduler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn import metrics
 import pickle
-import argparse
+import logging
+import requests
+import sys
+
+tf.get_logger().setLevel(logging.CRITICAL)
+mylogs = logging.getLogger(__name__)
+mylogs.setLevel(logging.DEBUG)
+
+stream = logging.StreamHandler()
+stream.setLevel(logging.INFO)
+streamformat = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
+stream.setFormatter(streamformat)
+
+file = logging.FileHandler("program_logs.log",encoding='utf-8')
+file.setLevel(logging.INFO)
+fileformat = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
+file.setFormatter(fileformat)
+
+mylogs.addHandler(stream)
+mylogs.addHandler(file)
+
+def excepthook(*args):
+  logging.getLogger().error('Uncaught exception:', exc_info=args)
+
+sys.excepthook = excepthook
 
 
 DATASET_DIRECTORY = "./datasets/FGNET/newImages/"
@@ -23,6 +59,7 @@ DATASET_SHAPE = (1002 ,224, 224, 3)
 NUM_OF_CLASSES = 82
 MODEL_SAVE_DIRECTORY = './saved_models/'
 SAVE_MODEL_ACCURACY_THRESHOLD = 0.86
+BOT_CONFIG_PATH = './bot_config.txt'
 
 
 def lr_schedule(epoch):
@@ -250,7 +287,48 @@ def save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accura
     if save_excel_stats:
         assert y_test_ages is not None and predicted is not None and history is not None and y_test is not None, 'y_test_ages, predicted, history, y_test are required to generate model stats'
         model_stats_to_excel(y_test_ages, predicted, history, y_test, model_location)
+    
+    if model_name: return model_name
+    else: return 'UnnamedModel'
+    
+def  notify_telegram(model_name, accuracy, telegram_bot_token=None, telegram_chatID=None, bot_config_file=BOT_CONFIG_PATH):
 
+    if os.path.exists(bot_config_file):
+        try:
+            with open(bot_config_file,'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            mylogs.error('COULD NOT LOCATE SETUP FILE')
+            sys.exit(0)
+
+
+        telegram_bot_token = lines[0][lines[0].find('=')+1:].strip()
+        telegram_chatID = lines[1][lines[1].find('=')+1:].strip()
+    else:
+        mylogs.warning('SETUP FILE DOES NOT EXIST! CREATING SETUP FILE')
+        assert telegram_bot_token and telegram_chatID, 'Must provid telegram_bot_token and telegram_chatID if setup file does not exist. Please check your inputs.'
+        telegram_bot_token = telegram_bot_token
+        telegram_chatID = telegram_chatID
+
+        setup_text = 'telegram_bot_token = {}\ntelegram_chatID = {}'.format(telegram_bot_token, telegram_chatID)
+        mylogs.info('CREATING SETUP FILE')
+        with open(bot_config_file,'w', encoding='utf-8') as f:
+                f.write(setup_text)
+        
+        mylogs.info('SETUP FILE CREATED SUCCESSFULLY') 
+            
+            
+    response = requests.get('https://api.telegram.org/bot{}/sendMessage'.format(telegram_bot_token),params={'text':f'Your model "{model_name}" has finished training with an accracy of: {accuracy*100:.2f}%','chat_id': '{}'.format(telegram_chatID)})
+    status = response.json()
+    if status['ok']:
+        mylogs.info('**********************STATUS:OK**********************')
+        sender = status['result']['from']
+        chat = status['result']['chat']
+        mylogs.info('MESSAGE SENT THROUGH {} TO {} {}'.format(sender['first_name'],chat['first_name'], chat['last_name']))
+        mylogs.info('MESSAGE: {}'.format(f'Your model "{model_name}" has finished training with an accracy of: {accuracy*100:.2f}%'))
+    else:
+        mylogs.warning('**********************STATUS:NO OK**********************')
+        mylogs.warning('MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID')
 
 def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD):
     x_train, y_train, x_test, y_test, y_train_categorical, y_test_categorical, y_test_ages = load_dataset()
@@ -263,54 +341,47 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
         classifier.fit(fused_vector, y_train)
 
         # predict and display using DNN and KNN classifiers
-        spacer = 35*"-"
         predicted = np.argmax(model.predict(x_test), axis=-1)
-        print("{}\nDNN Accuracy: {}\n{}".format(spacer,metrics.accuracy_score(y_test, predicted),spacer))
+        mylogs.info("DNN Accuracy: {}".format(metrics.accuracy_score(y_test, predicted)))
 
         predicted = classifier.predict(test_vector)
-        print("DCA Accuracy: {}\n{}".format(metrics.accuracy_score(y_test, predicted),spacer))
+        mylogs.info("DCA Accuracy: {}".format(metrics.accuracy_score(y_test, predicted)))
 
         DCA_accuracy = metrics.accuracy_score(y_test, predicted)
 
         if DCA_accuracy >= accuracy_threshold:
-            save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, 
+            model_name = save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, 
             save_excel_stats=save_excel_stats, y_test_ages=y_test_ages, predicted=predicted, history=history, y_test=y_test, save_directory=save_directory)
             break
+        else: model_name = 'Unnamed_model'
 
         tf.keras.backend.set_learning_phase(1)
         tf.keras.backend.clear_session()
         del model, history, fused_vector, test_vector, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3,
-        classifier, spacer, predicted
+        classifier, predicted
         if not loop: break
+    return model_name, DCA_accuracy
 
 
+        
+loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD
+if args.early_stop:
+    early_stop = True
+if args.no_excel:
+    save_excel_stats = False
+if args.knn_neighbors:
+    KNN_neighbors = args.knn_neighbors
+if args.save_directory:
+    save_directory = args.save_directory
+if args.loop:
+    loop = True
+    accuracy_threshold = args.accuracy_threshold
+model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold)
 
-parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('-d','--default', required=False, action='store_true', help='use default arguments')
-parser.add_argument('-l','--loop', required=False, action='store_true', help='loop program until desired accuracy is reached')
-parser.add_argument('-es','--early-stop', required=False, action='store_true', help='stop the training early if the accuracy is not improving')
-parser.add_argument('-ne','--no-excel', required=False, action='store_false', help="don't save stats to excel files")
-parser.add_argument('-kn','--knn-neighbors', required=False, type=int, help='number of KNN neighbors')
-parser.add_argument('-sd','--save-directory', required=False, type=str, help='Directory to save models')
-parser.add_argument('-at','--accuracy-threshold', required=False, type=float, help='Min accuracy to stop the loop')
-args = parser.parse_args()
+if args.notify_telegram: notify_telegram(model_name, accuracy)
 
-if args.default:
-    main()
-else:
-    loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD
-    if args.early_stop:
-        early_stop = True
-    if args.no_excel:
-        save_excel_stats = False
-    if args.knn_neighbors:
-        KNN_neighbors = args.knn_neighbors
-    if args.save_directory:
-        save_directory = args.save_directory
-    if args.loop:
-        loop = True
-        accuracy_threshold = args.accuracy_threshold
-    main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold)
+
+    
 
     
 
