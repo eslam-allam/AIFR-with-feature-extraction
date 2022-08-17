@@ -28,6 +28,8 @@ from io import BytesIO
 
 from PIL import Image as PILImage
 from kivy.core.image import Image as Core_Image
+
+# why tf is it imported twice need to rmove and make sure it's not used somewhere else
 from kivy.uix.image import Image as kiImage
 
 
