@@ -291,33 +291,37 @@ def save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accura
     if model_name: return model_name
     else: return 'UnnamedModel'
     
-def  notify_telegram(model_name, accuracy, telegram_bot_token=None, telegram_chatID=None, bot_config_file=BOT_CONFIG_PATH):
+def  notify_telegram(model_name=None, accuracy=None, telegram_bot_token=None, telegram_chatID=None, bot_config_file=BOT_CONFIG_PATH, init=False):
 
-    if os.path.exists(bot_config_file):
-        try:
-            with open(bot_config_file,'r', encoding='utf-8') as f:
-                lines = f.readlines()
-        except FileNotFoundError:
-            mylogs.error('COULD NOT LOCATE SETUP FILE')
-            sys.exit(0)
+    if init:
+        if os.path.exists(bot_config_file):
+            try:
+                with open(bot_config_file,'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+            except FileNotFoundError:
+                mylogs.error('COULD NOT LOCATE SETUP FILE')
+                sys.exit(0)
 
 
-        telegram_bot_token = lines[0][lines[0].find('=')+1:].strip()
-        telegram_chatID = lines[1][lines[1].find('=')+1:].strip()
-    else:
-        mylogs.warning('SETUP FILE DOES NOT EXIST! CREATING SETUP FILE')
-        assert telegram_bot_token and telegram_chatID, 'Must provid telegram_bot_token and telegram_chatID if setup file does not exist. Please check your inputs.'
-        telegram_bot_token = telegram_bot_token
-        telegram_chatID = telegram_chatID
+            telegram_bot_token = lines[0][lines[0].find('=')+1:].strip()
+            telegram_chatID = lines[1][lines[1].find('=')+1:].strip()
+        else:
+            mylogs.warning('SETUP FILE DOES NOT EXIST! CREATING SETUP FILE')
+            if not telegram_bot_token or not telegram_chatID:
+                mylogs.warning('SOME CORE VALUES NOT PROVIDED. ATTEMPTING MANUAL RETRIEVAL')
+            telegram_bot_token = input('ENTER YOUR TELEGRAM BOT TOKEN: ')
+            telegram_chatID = input('ENTER YOUR TELEGRAM CHAT ID: ')
 
-        setup_text = 'telegram_bot_token = {}\ntelegram_chatID = {}'.format(telegram_bot_token, telegram_chatID)
-        mylogs.info('CREATING SETUP FILE')
-        with open(bot_config_file,'w', encoding='utf-8') as f:
-                f.write(setup_text)
-        
-        mylogs.info('SETUP FILE CREATED SUCCESSFULLY') 
+            setup_text = 'telegram_bot_token = {}\ntelegram_chatID = {}'.format(telegram_bot_token, telegram_chatID)
+            mylogs.info('CREATING SETUP FILE')
+            with open(bot_config_file,'w', encoding='utf-8') as f:
+                    f.write(setup_text)
             
+            mylogs.info('SETUP FILE CREATED SUCCESSFULLY') 
             
+    if init: return  
+
+    assert model_name and accuracy, f"Invalid values for model_name, accuraccy = '{model_name}', '{accuracy}'"
     response = requests.get('https://api.telegram.org/bot{}/sendMessage'.format(telegram_bot_token),params={'text':f'Your model "{model_name}" has finished training with an accracy of: {accuracy*100:.2f}%','chat_id': '{}'.format(telegram_chatID)})
     status = response.json()
     if status['ok']:
@@ -376,8 +380,9 @@ if args.save_directory:
 if args.loop:
     loop = True
     accuracy_threshold = args.accuracy_threshold
-model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold)
 
+if args.notify_telegram: notify_telegram(init=True)
+model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold)
 if args.notify_telegram: notify_telegram(model_name, accuracy)
 
 
