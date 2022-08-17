@@ -45,12 +45,23 @@ from functools import partial
 import subprocess
 import sys
 
-if sys.platform == 'linux':
-    screensize = subprocess.Popen('xrandr | grep "\*" | cut -d" " -f4',shell=True, stdout=subprocess.PIPE).communicate()[0]
-    if b'\n' in screensize:
-        screensize = screensize.split(b'\n', 1)[0]
-    screensize = screensize.split(b'x')
-    screensize[0], screensize[1] = float(screensize[0])*0.82, float(screensize[1])*0.82
+# kivy cam imports
+import mediapipe as mp
+from kivy.clock import Clock
+from allign import proccess_image
+from kivy.graphics.texture import Texture
+
+if sys.platform == "linux":
+    screensize = subprocess.Popen(
+        'xrandr | grep "\*" | cut -d" " -f4', shell=True, stdout=subprocess.PIPE
+    ).communicate()[0]
+    if b"\n" in screensize:
+        screensize = screensize.split(b"\n", 1)[0]
+    screensize = screensize.split(b"x")
+    screensize[0], screensize[1] = (
+        float(screensize[0]) * 0.82,
+        float(screensize[1]) * 0.82,
+    )
 else:
     user32 = ctypes.windll.user32
     screensize = user32.GetSystemMetrics(0) * 0.82, user32.GetSystemMetrics(1) * 0.82
@@ -117,6 +128,17 @@ class LoadingLayout(MDFloatLayout):
     def on_touch_down(self, touch):  # Deactivate touch_down event
         if self.collide_point(*touch.pos):
             return True
+
+
+contentB4 = BoxLayout(orientation="vertical")
+popupB4 = Popup(
+    title="Notice!!",
+    content=contentB4,
+    auto_dismiss=False,
+    size_hint=(None, None),
+    width="400dp",
+    height="300dp",
+)
 
 
 class MainWindow(Screen):
@@ -339,26 +361,29 @@ class MainWindow(Screen):
             popupSave.dismiss()
 
     def but4Call(self, instance):
+        global contentB4, popupB4
         # pop to select how to redict
-        content = BoxLayout(orientation="vertical")
+
         popupBut1 = Button(text="Take a live image")
         popupBut2 = Button(text="Browse for an image")
         popupBut3 = Button(text="Run testing set")
         popupBut4 = Button(text="Cancel")
-        content.add_widget(popupBut1)
-        content.add_widget(popupBut2)
-        content.add_widget(popupBut4)
-        popup = Popup(
-            title="Notice!!",
-            content=content,
-            auto_dismiss=False,
-            size_hint=(None, None),
-            width="400dp",
-            height="300dp",
-        )
+        contentB4.add_widget(popupBut1)
+        contentB4.add_widget(popupBut2)
+        contentB4.add_widget(popupBut4)
+
+        popupBut1.bind(on_press=self.liveImageCap)
         popupBut2.bind(on_press=self.predictBrowse)
-        popupBut4.bind(on_press=popup.dismiss)
-        popup.open()
+        popupBut4.bind(on_press=popupB4.dismiss)
+        popupB4.open()
+
+    def liveImageCap(self, instance):
+        global popupB4
+        popupB4.dismiss()
+        print("Button is pressed")
+        print("The button % s state is <%s>" % (instance, instance.state))
+        self.manager.current = "forth"
+        self.manager.transition.direction = "left"
 
     def predictBrowse(self, instance):
 
@@ -545,6 +570,7 @@ class SecondWindow(Screen):
             print(xpic)
 
 
+# add image page
 class thirdWindow(Screen):
     def __init__(self, **kwargs):
         super(thirdWindow, self).__init__(**kwargs)
@@ -552,9 +578,7 @@ class thirdWindow(Screen):
         self.imgsToSave = []
         self.selectedImg = None
 
-        box = BoxLayout(
-            orientation="vertical"
-        )
+        box = BoxLayout(orientation="vertical")
 
         toolBar = BoxLayout(orientation="horizontal")
         toolBar.size_hint = (1, None)
@@ -579,7 +603,7 @@ class thirdWindow(Screen):
         # bottom bar
         uploadBox = BoxLayout(orientation="vertical", size_hint=(0.2, 1))
 
-        uploadB = Button(
+        uploadB = Button(  # upload buttom obv
             text="upload",
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             size_hint=(0.9, 1),
@@ -594,7 +618,6 @@ class thirdWindow(Screen):
 
         # FGnet_path = "./forDisplayTry/"
         # images_path = os.listdir(FGnet_path)
-
 
         scrollCounter = 0
         for i in self.imgsToSave:
@@ -888,6 +911,107 @@ class thirdWindow(Screen):
                 max = int(names[0])
 
         return max + 1
+
+
+PROCESSED_IMAGE_DIRECTORY = "./test_single_image/output"
+
+
+mp_drawing = mp.solutions.drawing_utils
+mp_drawing_styles = mp.solutions.drawing_styles
+mp_face_mesh = mp.solutions.face_mesh
+drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+
+
+class forthWindow(Screen):
+    def __init__(self, **kwargs):
+        super(forthWindow, self).__init__(**kwargs)
+        self.img1 = Image()
+        layout = BoxLayout()
+
+        button = Button(text="Capture", size=(200, 100), size_hint=(None, None))
+        button.bind(on_press=self.process_and_save_image)
+
+        layout.add_widget(self.img1)
+        layout.add_widget(button)
+        # opencv2 stuffs
+        self.capture = cv2.VideoCapture(0)
+        Clock.schedule_interval(self.update, 1.0 / 33.0)
+        self.add_widget(layout)
+
+    def process_and_save_image(self, instance):
+        processed_image = proccess_image(self.image_cap)
+
+        if not os.path.exists(PROCESSED_IMAGE_DIRECTORY):
+            os.mkdir(PROCESSED_IMAGE_DIRECTORY)
+        image_names = os.listdir(PROCESSED_IMAGE_DIRECTORY)
+
+        if not image_names:
+            name = "processed_capture_0.jpg"
+        else:
+            image_names = [name for name in image_names if "processed_capture_" in name]
+            name = f"processed_capture_{len(image_names)}.jpg"
+
+        path = PROCESSED_IMAGE_DIRECTORY + "/" + name
+        cv2.imwrite(path, processed_image)
+        print(path)
+
+    def update(self, dt):
+        # display image from cam in opencv window
+        success, image = self.capture.read()
+
+        with mp_face_mesh.FaceMesh(
+            max_num_faces=1,
+            refine_landmarks=True,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+        ) as face_mesh:
+
+            self.image_cap = image.copy()
+
+            # To improve performance, optionally mark the image as not writeable to
+            # pass by reference.
+            image.flags.writeable = False
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            results = face_mesh.process(image)
+
+            # Draw the face mesh annotations on the image.
+            image.flags.writeable = True
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+            if results.multi_face_landmarks:
+                for face_landmarks in results.multi_face_landmarks:
+                    mp_drawing.draw_landmarks(
+                        image=image,
+                        landmark_list=face_landmarks,
+                        connections=mp_face_mesh.FACEMESH_TESSELATION,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_tesselation_style(),
+                    )
+                    mp_drawing.draw_landmarks(
+                        image=image,
+                        landmark_list=face_landmarks,
+                        connections=mp_face_mesh.FACEMESH_CONTOURS,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_contours_style(),
+                    )
+                    mp_drawing.draw_landmarks(
+                        image=image,
+                        landmark_list=face_landmarks,
+                        connections=mp_face_mesh.FACEMESH_IRISES,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_iris_connections_style(),
+                    )
+
+        # convert it to texture
+        buf1 = cv2.flip(image, 0)
+        buf = buf1.tostring()
+        texture1 = Texture.create(size=(image.shape[1], image.shape[0]), colorfmt="bgr")
+        # if working on RASPBERRY PI, use colorfmt='rgba' here instead, but stick with "bgr" in blit_buffer.
+        texture1.blit_buffer(buf, colorfmt="bgr", bufferfmt="ubyte")
+        # display image from the texture
+        self.img1.texture = texture1
+
+        return image
 
 
 class WindowManager(ScreenManager):
