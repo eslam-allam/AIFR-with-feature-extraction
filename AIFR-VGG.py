@@ -1,45 +1,28 @@
-
-from dataclasses import dataclass
-from gc import callbacks
 import tensorflow as tf
-from tensorflow.keras.applications.vgg16 import preprocess_input
 from keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
 from keras_vggface import utils
 import pandas as pd
-
-import keras
-import graphviz
-from keras.utils.vis_utils import plot_model
-
-from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense, Dropout
-
 from dcaFuse import dcaFuse
-from keras import backend as K
-
 import numpy as np
 import os
 import cv2
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from keras_vggface.vggface import VGGFace
 from tensorflow.keras import regularizers
 from tensorflow.keras.callbacks import LearningRateScheduler
-
-from tqdm import tqdm as meter
-import logging
-import theano
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn import metrics
 import pickle
+import argparse
 
 
 DATASET_DIRECTORY = "./datasets/FGNET/newImages/"
 DATASET_SHAPE = (1002 ,224, 224, 3)
 NUM_OF_CLASSES = 82
 MODEL_SAVE_DIRECTORY = './saved_models/'
-SAVE_MODEL_ACCURACY_THRESHOLD = 86.0
+SAVE_MODEL_ACCURACY_THRESHOLD = 0.86
 
 
 def lr_schedule(epoch):
@@ -158,7 +141,7 @@ def build_model(x_train, y_train,epochs=50, early_stop=True, variable_lr=True, b
 
     return model, history
 
-def three_layer_MDCA(x_train, x_test, model, layer1='fc1', layer2='fc2', layer3='flatten'):
+def three_layer_MDCA(x_train, x_test,y_train, model, layer1='fc1', layer2='fc2', layer3='flatten'):
     m1 = Model(inputs=model.input, outputs=model.get_layer(layer1).output)
     fc1_train = m1.predict(x_train)
     fc1_test = m1.predict(x_test)
@@ -230,7 +213,7 @@ def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directo
 
 
     age_based_tally = age_based_tally.T
-    age_based_tally.to_excel(output_directory+'Age_based_tally.xlsx')
+    age_based_tally.to_excel(output_directory+'/Age_based_tally.xlsx')
 
     accuracy_history = history.history['accuracy']
     val_accuraccy_history = history.history['val_accuracy']
@@ -248,53 +231,88 @@ def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directo
     accuracy_df = accuracy_df.T
     loss_df = loss_df.T
 
-    accuracy_df.to_excel(output_directory+'Model_Accuracy.xlsx')
-    loss_df.to_excel(output_directory+'Model_Loss.xlsx')
+    accuracy_df.to_excel(output_directory+'/Model_Accuracy.xlsx')
+    loss_df.to_excel(output_directory+'/Model_Loss.xlsx')
 
-def save_model(model, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, save_directory=MODEL_SAVE_DIRECTORY, model_name=None):
+def save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accuracy,save_directory=MODEL_SAVE_DIRECTORY, model_name=None, save_excel_stats=False, y_test_ages=None, predicted=None, history=None, y_test=None):
 
     if not model_name: 
         saved_models = os.listdir(save_directory)
-        model_name = f'model{len(saved_models)}'
+        model_name = f'model{len(saved_models)+1}_accuracy_{accuracy*100:.2f}'
 
     model_location = save_directory+model_name
-    os.makedirs(model_location,exist_ok=True)
-    with open(model_location+"KNN_model", "wb") as f:
-        pickle.dump(classifier, f)
-    np.save(model_location+"Atransform1", Ax1)
-    np.save(model_location+"Ytransform1", Ay1)
-    np.save(model_location+"Atransform2", Ax2)
-    np.save(model_location+"Ytransform2", Ay2)
-    np.save(model_location+"Atransform3", Ax3)
-    np.save(model_location+"Ytransform3", Ay3)
-    m1.save(model_location+"fc1_model.h5")
-    m2.save(model_location+"fc2_model.h5")
-    pooling.save(model_location+"pooling_model.h5")
-x_train, y_train, x_test, y_test, y_train_categorical, y_test_categorical, y_test_ages = load_dataset()
+    os.makedirs(model_location,exist_ok=False)
+    models = [m1, m2, pooling, classifier]
+    with open(model_location+'/compressed_models.pcl', "wb") as f:
+        pickle.dump(models, f)
+    np.savez(model_location+"/x_y_transforms", Ax1, Ax2, Ax3, Ay1, Ay2, Ay3)
 
-while True:
-    model, history = build_model(x_train, y_train_categorical, early_stop=False)
-    fused_vector, test_vector, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(x_train, x_test, model)
+    if save_excel_stats:
+        assert y_test_ages is not None and predicted is not None and history is not None and y_test is not None, 'y_test_ages, predicted, history, y_test are required to generate model stats'
+        model_stats_to_excel(y_test_ages, predicted, history, y_test, model_location)
 
-    classifier = KNeighborsClassifier(n_neighbors=5)
-    classifier.fit(fused_vector, y_train)
 
-    # predict and display using DNN and KNN classifiers
-    spacer = 35*"-"
-    predicted = np.argmax(model.predict(x_test), axis=-1)
-    print("{}\nDNN Accuracy: {}\n{}".format(spacer,metrics.accuracy_score(y_test, predicted),spacer))
+def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD):
+    x_train, y_train, x_test, y_test, y_train_categorical, y_test_categorical, y_test_ages = load_dataset()
 
-    predicted = classifier.predict(test_vector)
-    print("DCA Accuracy: {}\n{}".format(metrics.accuracy_score(y_test, predicted),spacer))
+    while True:
+        model, history = build_model(x_train, y_train_categorical, early_stop=early_stop)
+        fused_vector, test_vector, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(x_train, x_test,y_train, model)
 
-    if metrics.accuracy_score(y_test, predicted) > SAVE_MODEL_ACCURACY_THRESHOLD:
-        model_stats_to_excel(y_test_ages, predicted, history, y_test, './accuracy_stats')
-        save_model(model, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3)
-        break
-    tf.keras.backend.set_learning_phase(1)
-    tf.keras.backend.clear_session()
-    del model, history, fused_vector, test_vector, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3,
-    classifier, spacer, predicted
+        classifier = KNeighborsClassifier(n_neighbors=KNN_neighbors)
+        classifier.fit(fused_vector, y_train)
+
+        # predict and display using DNN and KNN classifiers
+        spacer = 35*"-"
+        predicted = np.argmax(model.predict(x_test), axis=-1)
+        print("{}\nDNN Accuracy: {}\n{}".format(spacer,metrics.accuracy_score(y_test, predicted),spacer))
+
+        predicted = classifier.predict(test_vector)
+        print("DCA Accuracy: {}\n{}".format(metrics.accuracy_score(y_test, predicted),spacer))
+
+        DCA_accuracy = metrics.accuracy_score(y_test, predicted)
+
+        if DCA_accuracy >= accuracy_threshold:
+            save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, 
+            save_excel_stats=save_excel_stats, y_test_ages=y_test_ages, predicted=predicted, history=history, y_test=y_test, save_directory=save_directory)
+            break
+
+        tf.keras.backend.set_learning_phase(1)
+        tf.keras.backend.clear_session()
+        del model, history, fused_vector, test_vector, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3,
+        classifier, spacer, predicted
+        if not loop: break
+
+
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('-d','--default', required=False, action='store_true', help='use default arguments')
+parser.add_argument('-l','--loop', required=False, action='store_true', help='loop program until desired accuracy is reached')
+parser.add_argument('-es','--early-stop', required=False, action='store_true', help='stop the training early if the accuracy is not improving')
+parser.add_argument('-ne','--no-excel', required=False, action='store_false', help="don't save stats to excel files")
+parser.add_argument('-kn','--knn-neighbors', required=False, type=int, help='number of KNN neighbors')
+parser.add_argument('-sd','--save-directory', required=False, type=str, help='Directory to save models')
+parser.add_argument('-at','--accuracy-threshold', required=False, type=float, help='Min accuracy to stop the loop')
+args = parser.parse_args()
+
+if args.default:
+    main()
+else:
+    loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD
+    if args.early_stop:
+        early_stop = True
+    if args.no_excel:
+        save_excel_stats = False
+    if args.knn_neighbors:
+        KNN_neighbors = args.knn_neighbors
+    if args.save_directory:
+        save_directory = args.save_directory
+    if args.loop:
+        loop = True
+        accuracy_threshold = args.accuracy_threshold
+    main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold)
+
+    
 
 
 
