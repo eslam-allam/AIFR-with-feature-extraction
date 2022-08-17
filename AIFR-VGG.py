@@ -1,13 +1,14 @@
 import argparse
 
-parser = argparse.ArgumentParser(description='Process some integers.')
+parser = argparse.ArgumentParser(description='Train and save a DNN-MDCA model using a dataset from directory. The input images must have a shape of (224, 224, 3) and prefereably preprocessed adequatily.')
 parser.add_argument('-l','--loop', required=False, action='store_true', help='loop program until desired accuracy is reached')
 parser.add_argument('-es','--early-stop', required=False, action='store_true', help='stop the training early if the accuracy is not improving')
 parser.add_argument('-ne','--no-excel', required=False, action='store_false', help="don't save stats to excel files")
+parser.add_argument('-bc','--bot-config', metavar='\b', required=False, help="Modify bot configuration file location.")
 parser.add_argument('-nt','--notify-telegram', required=False, action='store_true', help="send telegram notification when training is finished")
-parser.add_argument('-kn','--knn-neighbors', required=False, type=int, help='number of KNN neighbors')
-parser.add_argument('-sd','--save-directory', required=False, type=str, help='Directory to save models')
-parser.add_argument('-at','--accuracy-threshold', required=False, type=float, help='Min accuracy to stop the loop')
+parser.add_argument('-kn','--knn-neighbors', metavar='\b', required=False, type=int, help='number of KNN neighbors')
+parser.add_argument('-sd','--save-directory', metavar='\b', required=False, type=str, help='Directory to save models')
+parser.add_argument('-at','--accuracy-threshold', metavar='\b', required=False, type=float, help='Min accuracy to stop the loop')
 args = parser.parse_args()
 
 import tensorflow as tf
@@ -380,8 +381,17 @@ if args.save_directory:
 if args.loop:
     loop = True
     accuracy_threshold = args.accuracy_threshold
+    
+mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
+                             LOOP = {loop}, EARLY_STOP = {early_stop}, SAVE_EXCEL_STATS = {save_excel_stats},
+                             NUMBER_OF_KNN_NEIGHBOURS = {KNN_neighbors}
+                             SAVE_DIRECTORY = {save_directory}
+                             ACCURACY_THRESHOLD = {accuracy_threshold}
+----------------------------------------------------------------------''')
 
-if args.notify_telegram: notify_telegram(init=True)
+if args.notify_telegram: 
+    mylogs.info('TELEGRAM NOTIFICATION ENABLED BY USER. STARTING CONFIG.')
+    notify_telegram(init=True)
 model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold)
 if args.notify_telegram: notify_telegram(model_name, accuracy)
 
