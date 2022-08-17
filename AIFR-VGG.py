@@ -58,13 +58,14 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     mylogs.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 
 sys.excepthook = handle_exception
+sys.setrecursionlimit(10000)
 
 
 DATASET_DIRECTORY = "./datasets/FGNET/newImages/"
 DATASET_SHAPE = (1002 ,224, 224, 3)
 NUM_OF_CLASSES = 82
 MODEL_SAVE_DIRECTORY = './saved_models/'
-SAVE_MODEL_ACCURACY_THRESHOLD = 0.82
+SAVE_MODEL_ACCURACY_THRESHOLD = 0.86
 BOT_CONFIG_PATH = './bot_config.txt'
 
 
