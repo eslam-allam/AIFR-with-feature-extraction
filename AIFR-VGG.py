@@ -49,10 +49,14 @@ file.setFormatter(fileformat)
 mylogs.addHandler(stream)
 mylogs.addHandler(file)
 
-def excepthook(*args):
-  logging.getLogger().error('Uncaught exception:', exc_info=args)
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        mylogs.info('KEYBOARD INTERRUPT, PROGRAM TERMINATED')
+        sys.exit(0)
 
-sys.excepthook = excepthook
+    mylogs.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = handle_exception
 
 
 DATASET_DIRECTORY = "./datasets/FGNET/newImages/"
