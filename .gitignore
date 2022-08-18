@@ -13,3 +13,5 @@ dcaFuse/
 saved_models/model586/KNN_model
 *.jpg
 saved_models/
+*.txt
+*.log
