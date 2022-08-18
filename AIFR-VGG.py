@@ -4,6 +4,7 @@ parser = argparse.ArgumentParser(description='Train and save a DNN-MDCA model us
 parser.add_argument('-l','--loop', required=False, action='store_true', help='loop program until desired accuracy is reached')
 parser.add_argument('-es','--early-stop', required=False, action='store_true', help='stop the training early if the accuracy is not improving')
 parser.add_argument('-ne','--no-excel', required=False, action='store_true', help="don't save stats to excel files")
+parser.add_argument('-v','--variable-dropout', required=False, type=float, action='store', help="increase dropout after every iteration")
 parser.add_argument('-s','--model-summary', required=False, action='store_true', help="Print summary of built TF model")
 parser.add_argument('-bc','--bot-config', metavar='\b', required=False, help="Modify bot configuration file location.")
 parser.add_argument('-nt','--notify-telegram', required=False, action='store_true', help="send telegram notification when training is finished")
@@ -28,17 +29,21 @@ from tensorflow.keras import regularizers
 from tensorflow.keras.callbacks import LearningRateScheduler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn import metrics
-import pickle
+import pickle 
 import logging
 import requests
 import sys
+import re
+from tqdm import tqdm as meter
 
 tf.get_logger().setLevel(logging.CRITICAL)
 mylogs = logging.getLogger(__name__)
 mylogs.setLevel(logging.DEBUG)
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+
 stream = logging.StreamHandler()
-stream.setLevel(logging.INFO)
+stream.setLevel(logging.DEBUG)
 streamformat = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
 stream.setFormatter(streamformat)
 
@@ -62,8 +67,7 @@ sys.setrecursionlimit(10000)
 
 
 DATASET_DIRECTORY = "./datasets/FGNET/newImages/"
-DATASET_SHAPE = (1002 ,224, 224, 3)
-NUM_OF_CLASSES = 82
+IMAGE_SHAPE = (224, 224, 3)
 MODEL_SAVE_DIRECTORY = './saved_models/'
 SAVE_MODEL_ACCURACY_THRESHOLD = 0.86
 BOT_CONFIG_PATH = './bot_config.txt'
@@ -81,42 +85,45 @@ def lr_schedule(epoch):
         lrate = 0.00005
     return lrate
 
-def load_dataset(directory=DATASET_DIRECTORY, data_shape=DATASET_SHAPE, num_classes=NUM_OF_CLASSES):
+def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
     image_list = os.listdir(directory)
+
+    number_of_images = len(image_list)
+    data_shape = (number_of_images,) + image_shape
+    mylogs.debug(f'NUMBER OF IMAGES: {len(image_list)}')
 
     images_array = np.ndarray(
         data_shape, dtype="int32"
-    )  ##################################
-    labels = []  ##################################
-    y_test_ages = []
+    )  
+    labels = np.empty(number_of_images, dtype=int) 
+    ages = np.empty(number_of_images, dtype=int)
     # fill image and label arrays
 
-    for i, image in enumerate(image_list):
+    mylogs.info('LOADING DATASET')
+    for i, image in enumerate(meter(image_list)):
         temp_image = cv2.imread(directory + image)
         images_array[i] = temp_image
-        label = image[0:6]
-        labels.append(label)
+        label = image.split('.')[0].split('A')
+        label, age = int(label[0]) -1 , label[1]
+        ages[i] = re.sub(r'[aA-zZ]+', '', age )
+        labels[i] = label
+    
+    num_classes = len(np.unique(labels))
+    mylogs.debug(f'NUMBER OF CLASSES: {num_classes}')
 
     # split the data into train and test
     x_train, x_test, y_train, y_test = train_test_split(
         images_array, labels, test_size=0.20, random_state=33
     )
+    y_train_ages, y_test_ages = train_test_split(ages, test_size=0.20, random_state=33)
+    
 
-    for i, y in enumerate(y_train):
-        y_train[i] = int(y[0:3]) - 1
-
-    for i, y in enumerate(y_test):
-        y_test[i] = int(y[0:3]) - 1
-        y_test_ages.append(int(y[4:6]))
-
-    y_train = np.array(y_train)
     y_test = np.array(y_test)
     labels = np.array(labels)
     
     y_train_categorical = tf.keras.utils.to_categorical(
         y_train, num_classes=num_classes, dtype="float32"
     )
-    y_test_categorical = tf.keras.utils.to_categorical(y_test, num_classes=num_classes, dtype="float32")
     
     x_train = x_train.astype("float32")
     x_test = x_test.astype("float32")
@@ -124,9 +131,12 @@ def load_dataset(directory=DATASET_DIRECTORY, data_shape=DATASET_SHAPE, num_clas
     x_train = utils.preprocess_input(x_train, version=2)
     x_test = utils.preprocess_input(x_test, version=2)
     
-    return x_train, y_train, x_test, y_test, y_train_categorical, y_test_categorical, y_test_ages
+    return x_train, y_train, x_test, y_test, y_train_categorical, y_test_ages, num_classes
 
-def build_model(x_train, y_train,epochs=50, early_stop=True, variable_lr=True, batch_size=32, model_summary=False):
+def build_model(x_train, y_train,epochs=50, early_stop=True, variable_lr=True, batch_size=128, model_summary=False, num_classes=82, drop_out= 0.2):
+
+    mylogs.info('CREATING MODEL')
+
     base_model = VGGFace(
         model="senet50", include_top=True, input_shape=(224, 224, 3), pooling="avg"
     )
@@ -140,14 +150,15 @@ def build_model(x_train, y_train,epochs=50, early_stop=True, variable_lr=True, b
         name="fc1",
         kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
     )(x)
+    drop1 = Dropout(drop_out)(dense1)
     dense2 = Dense(
         4096,
         activation="relu",
         name="fc2",
         kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
-    )(dense1)
-    drop = Dropout(0.3)(dense2)
-    predictions = Dense(82, activation="softmax")(drop)  
+    )(drop1)
+    drop = Dropout(drop_out)(dense2)
+    predictions = Dense(num_classes, activation="softmax")(drop)  
     model = Model(inputs=base_model.input, outputs=predictions)
 
     
@@ -158,7 +169,7 @@ def build_model(x_train, y_train,epochs=50, early_stop=True, variable_lr=True, b
         mylogs.info(f'MODEL SUMMARY:\n{summary_lines}')
 
     
-
+    mylogs.info('COMPILING MODEL')
     model.compile(
         optimizer="adam",
         loss="categorical_crossentropy",
@@ -176,8 +187,8 @@ def build_model(x_train, y_train,epochs=50, early_stop=True, variable_lr=True, b
     if variable_lr:
         callbacks.append(LearningRateScheduler(lr_schedule))
 
-    steps = int(x_train.shape[0] / batch_size)
 
+    mylogs.info('TRAINING MODEL')
     history = model.fit(
         x_train,
         y_train,
@@ -185,24 +196,27 @@ def build_model(x_train, y_train,epochs=50, early_stop=True, variable_lr=True, b
         batch_size=batch_size,
         callbacks=callbacks,
         validation_split=0.2,
-        steps_per_epoch=steps,
         use_multiprocessing=True,
     )
 
     return model, history
 
 def three_layer_MDCA(x_train, x_test,y_train, model, layer1='fc1', layer2='fc2', layer3='flatten'):
+
+    mylogs.info('EXTRACTING FC1 VECTOR')
     m1 = Model(inputs=model.input, outputs=model.get_layer(layer1).output)
     fc1_train = m1.predict(x_train)
     fc1_test = m1.predict(x_test)
 
+    mylogs.info('EXTRACTING FC2 VECTOR')
     m2 = Model(inputs=model.input, outputs=model.get_layer(layer2).output)
     fc2_train = m2.predict(x_train)
     fc2_test = m2.predict(x_test)
 
-    pooling = Model(inputs=model.input, outputs=model.get_layer(layer3).output)
-    pooling_train = pooling.predict(x_train)
-    pooling_test = pooling.predict(x_test)
+    mylogs.info('EXTRACTING FLATTEN VECTOR')
+    flatten = Model(inputs=model.input, outputs=model.get_layer(layer3).output)
+    flatten_train = flatten.predict(x_train)
+    flatten_test = flatten.predict(x_test)
 
     fc1_train = fc1_train.T
     fc2_train = fc2_train.T
@@ -210,23 +224,27 @@ def three_layer_MDCA(x_train, x_test,y_train, model, layer1='fc1', layer2='fc2',
     fc1_test = fc1_test.T
     fc2_test = fc2_test.T
 
-    pooling_train = pooling_train.T
-    pooling_test = pooling_test.T
+    flatten_train = flatten_train.T
+    flatten_test = flatten_test.T
 
+    mylogs.info('STAGE 1 FUSION')
     Xs, Ys, Ax1, Ay1 = dcaFuse(fc1_train, fc2_train, y_train)
     fused_vector1 = np.concatenate((Xs, Ys))
 
+    
     testX = np.matmul(Ax1, fc1_test)
     testY = np.matmul(Ay1, fc2_test)
     test_vector1 = np.concatenate((testX, testY))
 
-    Xs, Ys, Ax2, Ay2 = dcaFuse(fc1_train, pooling_train, y_train)
+    mylogs.info('STAGE 2 FUSION')
+    Xs, Ys, Ax2, Ay2 = dcaFuse(fc1_train, flatten_train, y_train)
     fused_vector2 = np.concatenate((Xs, Ys))
 
     testX = np.matmul(Ax2, fc1_test)
-    testY = np.matmul(Ay2, pooling_test)
+    testY = np.matmul(Ay2, flatten_test)
     test_vector2 = np.concatenate((testX, testY))
 
+    mylogs.info('STAGE 3 FUSION')
     Xs, Ys, Ax3, Ay3 = dcaFuse(fused_vector1, fused_vector2, y_train)
     fused_vector3 = np.concatenate((Xs, Ys))
 
@@ -234,12 +252,11 @@ def three_layer_MDCA(x_train, x_test,y_train, model, layer1='fc1', layer2='fc2',
     testY = np.matmul(Ay3, test_vector2)
     test_vector3 = np.concatenate((testX, testY))
 
-    fc2_train, pooling_train, fc1_test, fc2_test, pooling_test
 
     fused_vector = fused_vector3.T
     test_vector = test_vector3.T
 
-    return fused_vector, test_vector, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3
+    return fused_vector, test_vector, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3
 
 def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directory='./'):
     
@@ -263,7 +280,7 @@ def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directo
 
 
     age_based_tally = age_based_tally.T
-    age_based_tally.to_excel(output_directory+'/Age_based_tally.xlsx')
+    
 
     accuracy_history = history.history['accuracy']
     val_accuraccy_history = history.history['val_accuracy']
@@ -281,10 +298,15 @@ def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directo
     accuracy_df = accuracy_df.T
     loss_df = loss_df.T
 
-    accuracy_df.to_excel(output_directory+'/Model_Accuracy.xlsx')
-    loss_df.to_excel(output_directory+'/Model_Loss.xlsx')
+    writer = pd.ExcelWriter(output_directory+'/Model_accuracy_stats.xlsx', engine='xlsxwriter')
+    age_based_tally.to_excel(writer, sheet_name='Age_based_tally')
+    accuracy_df.to_excel(writer, sheet_name='Model_Accuracy')
+    loss_df.to_excel(writer, sheet_name='Model_Loss')
 
-def save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accuracy,save_directory=MODEL_SAVE_DIRECTORY, model_name=None, save_excel_stats=False, y_test_ages=None, predicted=None, history=None, y_test=None):
+    mylogs.info(f"EXPORTING EXCEL FILE TO {output_directory+'/Model_accuracy_stats.xlsx'}")
+    writer.save()
+
+def save_model(m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accuracy,save_directory=MODEL_SAVE_DIRECTORY, model_name=None, save_excel_stats=False, y_test_ages=None, predicted=None, history=None, y_test=None):
 
     if not model_name: 
         saved_models = os.listdir(save_directory)
@@ -292,7 +314,9 @@ def save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accura
 
     model_location = save_directory+model_name
     os.makedirs(model_location,exist_ok=False)
-    models = [m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier]
+    models = [m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier]
+
+    mylogs.info(f"EXPORTING MODELS TO {model_location+'/compressed_models.pcl'}")
     with open(model_location+'/compressed_models.pcl', "wb") as f:
         pickle.dump(models, f)
 
@@ -333,7 +357,7 @@ def  notify_telegram(model_name=None, accuracy=None, telegram_bot_token=None, te
             
     if init: return  telegram_bot_token, telegram_chatID
 
-    assert model_name and accuracy, f"Invalid values for model_name, accuraccy = '{model_name}', '{accuracy}'"
+    assert model_name and accuracy, f"INVALID VALUES FOR MODEL_NAME, ACCURACY '{model_name}', '{accuracy}'"
     response = requests.get('https://api.telegram.org/bot{}/sendMessage'.format(telegram_bot_token),params={'text':f'Your model "{model_name}" has finished training with an accracy of: {accuracy*100:.2f}%','chat_id': '{}'.format(telegram_chatID)})
     status = response.json()
     if status['ok']:
@@ -346,12 +370,12 @@ def  notify_telegram(model_name=None, accuracy=None, telegram_bot_token=None, te
         mylogs.warning('**********************STATUS:NO OK**********************')
         mylogs.warning('MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID')
 
-def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD, model_summary=False):
-    x_train, y_train, x_test, y_test, y_train_categorical, y_test_categorical, y_test_ages = load_dataset()
+def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD, model_summary=False, drop_out=0.2, variable_dropout=None):
+    x_train, y_train, x_test, y_test, y_train_categorical, y_test_ages, num_classes = load_dataset()
 
     while True:
-        model, history = build_model(x_train, y_train_categorical, early_stop=early_stop, model_summary=model_summary)
-        fused_vector, test_vector, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(x_train, x_test,y_train, model)
+        model, history = build_model(x_train, y_train_categorical, early_stop=early_stop, model_summary=model_summary, num_classes=num_classes, drop_out=drop_out)
+        fused_vector, test_vector, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(x_train, x_test,y_train, model)
 
         classifier = KNeighborsClassifier(n_neighbors=KNN_neighbors)
         classifier.fit(fused_vector, y_train)
@@ -366,21 +390,25 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
         DCA_accuracy = metrics.accuracy_score(y_test, predicted)
 
         if DCA_accuracy >= accuracy_threshold:
-            model_name = save_model(m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, 
+            model_name = save_model(m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, 
             save_excel_stats=save_excel_stats, y_test_ages=y_test_ages, predicted=predicted, history=history, y_test=y_test, save_directory=save_directory)
             break
         else: model_name = 'Unnamed_model'
 
         tf.keras.backend.set_learning_phase(1)
         tf.keras.backend.clear_session()
-        del model, history, fused_vector, test_vector, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3,
+        del model, history, fused_vector, test_vector, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3,
         classifier, predicted
         if not loop: break
+        elif variable_dropout is not None: 
+            drop_out += variable_dropout
+            mylogs.info(f'VARIABLE DROPOUT ENABLED, CURRENT DROPOUT = {drop_out}')
+            assert drop_out <= 0.6, 'DROP OUT TOO HIGH, ABORTING' 
     return model_name, DCA_accuracy
 
 
         
-loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD, False
+loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary, variable_dropout = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD, False, None
 if args.early_stop:
     early_stop = True
 if args.no_excel:
@@ -393,6 +421,8 @@ if args.model_summary:
     model_summary = True
 if args.loop:
     loop = True
+if args.variable_dropout:
+    variable_dropout = args.variable_dropout
 if args.accuracy_threshold:
     accuracy_threshold = args.accuracy_threshold
     
@@ -401,13 +431,14 @@ mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
                              NUMBER_OF_KNN_NEIGHBOURS = {KNN_neighbors}
                              SAVE_DIRECTORY = {save_directory}
                              ACCURACY_THRESHOLD = {accuracy_threshold}
+                             VARIABLE_DROPOUT = {variable_dropout} 
 ----------------------------------------------------------------------''')
 
 if args.notify_telegram: 
     mylogs.info('TELEGRAM NOTIFICATION ENABLED BY USER. STARTING CONFIG.')
     telegram_bot_token, telegram_chatID = notify_telegram(init=True)
 
-model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary)
+model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary=model_summary, variable_dropout=variable_dropout)
 
 if args.notify_telegram: notify_telegram(model_name, accuracy, telegram_bot_token=telegram_bot_token, telegram_chatID=telegram_chatID)
 
