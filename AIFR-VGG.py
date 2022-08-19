@@ -82,6 +82,7 @@ EPOCHS = 150
 DROPOUT = 0.2
 
 
+
 def lr_schedule(epoch):
     lrate = 0.001
     if epoch > 5:
