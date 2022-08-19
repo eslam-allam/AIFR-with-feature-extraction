@@ -27,8 +27,8 @@ def unison_shuffled_copies(a, b):
     return a[p], b[p]
 
 
-with open('saved_models/model11_accuracy_86.07/compressed_models.pcl', 'rb') as f:
-    m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
+with open('saved_models/model6_accuracy_86.07/compressed_models.pcl', 'rb') as f:
+    model, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
 
 image_directory = './datasets/FGNET/newImages/'
 image_list = os.listdir(image_directory)
