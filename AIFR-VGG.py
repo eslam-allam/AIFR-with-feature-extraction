@@ -4,6 +4,7 @@ parser = argparse.ArgumentParser(description='Train and save a DNN-MDCA model us
 parser.add_argument('-l','--loop', required=False, action='store_true', help='loop program until desired accuracy is reached')
 parser.add_argument('-es','--early-stop', required=False, action='store_true', help='stop the training early if the accuracy is not improving')
 parser.add_argument('-ne','--no-excel', required=False, action='store_true', help="don't save stats to excel files")
+parser.add_argument('-s','--shutdown', required=False, action='store_true', help="shutdown computer after program is done. Currently only works on systemctl OS such as ubuntu.")
 parser.add_argument('-v','--variable-dropout', required=False, type=float, action='store', help="increase dropout after every iteration")
 parser.add_argument('-d','--dropout', required=False, type=float, action='store', help="Set dropout value")
 parser.add_argument('-s','--model-summary', required=False, action='store_true', help="Print summary of built TF model")
@@ -39,6 +40,7 @@ import re
 from tqdm import tqdm as meter
 import gc
 import random
+import subprocess
 
 tf.get_logger().setLevel(logging.CRITICAL)
 mylogs = logging.getLogger(__name__)
@@ -62,9 +64,11 @@ mylogs.addHandler(file)
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         mylogs.info('KEYBOARD INTERRUPT, PROGRAM TERMINATED')
+        
     else:
         mylogs.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
         if args.notify_telegram: notify_telegram(config_from_file=True, message=f'Model training experienced a critical error and was terninated.\nError info:\nException type: {exc_type}\nException value: {exc_value}\nTraceback: {exc_traceback}')
+        if args.shutdown: subprocess.call(['systemctl', 'poweroff'])
     sys.exit(0)
 
     
