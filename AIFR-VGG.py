@@ -467,6 +467,7 @@ mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
                              KNN_NEIGHBORS = {KNN_neighbors}
                              VARIABLE_KNN_NEIGHBORS = {variable_knn}
                              SAVE_DIRECTORY = {save_directory}
+                             SYSTEM_SHUTDOWN = {args.shutdown}
 ------------------------------------------------------------------------------------------------------------------------------------------------''')
 
 if args.notify_telegram: 
@@ -476,3 +477,5 @@ if args.notify_telegram:
 model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary=model_summary, variable_dropout=variable_dropout, drop_out=drop_out, variable_knn=variable_knn)
 
 if args.notify_telegram: notify_telegram(model_name, accuracy, telegram_bot_token=telegram_bot_token, telegram_chatID=telegram_chatID)
+if args.shutdown:
+    subprocess.call(['systemctl', 'poweroff'])
