@@ -938,15 +938,16 @@ class forthWindow(Screen):
         # opencv2 stuffs
         self.capture = cv2.VideoCapture(0)
         Clock.schedule_interval(self.update, 1.0 / 33.0)
+        Clock.schedule_interval(self.saperatePrediction, 1)
         self.add_widget(layout)
 
-    def process_and_save_image(self, instance):
+    def process_and_save_image(self):
         processed_image = proccess_image(self.image_cap)
-
+        print("here")
         if not os.path.exists(PROCESSED_IMAGE_DIRECTORY):
             os.mkdir(PROCESSED_IMAGE_DIRECTORY)
         image_names = os.listdir(PROCESSED_IMAGE_DIRECTORY)
-
+        print("here")
         if not image_names:
             name = "processed_capture_0.jpg"
         else:
@@ -956,6 +957,7 @@ class forthWindow(Screen):
         path = PROCESSED_IMAGE_DIRECTORY + "/" + name
         cv2.imwrite(path, processed_image)
         print(path)
+        return path
 
     def update(self, dt):
         # display image from cam in opencv window
@@ -975,12 +977,15 @@ class forthWindow(Screen):
             image.flags.writeable = False
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             results = face_mesh.process(image)
-
+            # if results.multi_face_landmarks:
+            #    print(type(self.image_cap))
             # Draw the face mesh annotations on the image.
             image.flags.writeable = True
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
             if results.multi_face_landmarks:
+                # predict if there is detaction
+                # processed_image = proccess_image(self.image_cap)
                 for face_landmarks in results.multi_face_landmarks:
                     mp_drawing.draw_landmarks(
                         image=image,
@@ -1014,6 +1019,81 @@ class forthWindow(Screen):
         self.img1.texture = texture1
 
         return image
+
+    def saperatePrediction(self, idk):
+        success, image = self.capture.read()
+
+        with mp_face_mesh.FaceMesh(
+            max_num_faces=1,
+            refine_landmarks=True,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+        ) as face_mesh:
+
+            self.image_cap = image.copy()
+
+            # To improve performance, optionally mark the image as not writeable to
+            # pass by reference.
+            image.flags.writeable = False
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            results = face_mesh.process(image)
+            if results.multi_face_landmarks:
+                processed_image = proccess_image(self.image_cap)
+                if not os.path.exists(PROCESSED_IMAGE_DIRECTORY):
+                    os.mkdir(PROCESSED_IMAGE_DIRECTORY)
+                image_names = os.listdir(PROCESSED_IMAGE_DIRECTORY)
+                print("here")
+                if not image_names:
+                    name = "processed_capture_0.jpg"
+                else:
+                    image_names = [
+                        name for name in image_names if "processed_capture_" in name
+                    ]
+                    name = f"processed_capture_{len(image_names)}.jpg"
+
+                path = PROCESSED_IMAGE_DIRECTORY + "/" + name
+
+                try:
+                    if processed_image is not None:
+                        cv2.imwrite(path, processed_image)
+                except:
+                    print(processed_image)
+                self.predictLive(path)
+                # print(processed_image)
+
+                print(
+                    "-----------------------------------------------------------------------------"
+                )
+
+                # self.predictLive(self, ipath)
+                """cv2.imshow("graycsale image", processed_image)
+                print(type(self.image_cap))
+                print(type(processed_image))"""
+
+    def predictLive(self, path):
+
+        if trainingClassInstance.trained == False:
+            # if there is no model show notice
+            latestModelPath = trainingClassInstance.getLastModel()
+
+            if latestModelPath != False:
+                # path = filechooser.open_file(title="Pick a img file..")
+                # if not path:
+                #  print("{}\nNO IMAGE CHOSEN!!!!\n{}".format("-" * 10, "-" * 10))
+                #   return False
+                # os.chdir(currDirectory)
+
+                print(trainingClassInstance.predictWMOdel2(path, latestModelPath))
+            else:
+                print("there are no models available train one")
+                # pop up for this
+        else:
+            pathx = filechooser.open_file(title="Pick a img file..")
+            if not pathx:
+                print("{}\nNO IMAGE CHOSEN!!!!\n{}".format("-" * 10, "-" * 10))
+                return False
+            os.chdir(currDirectory)
+            trainingClassInstance.predict(pathx)
 
 
 class WindowManager(ScreenManager):
