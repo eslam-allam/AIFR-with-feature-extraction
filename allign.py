@@ -6,6 +6,7 @@ import numpy as np
 import os
 from tqdm import tqdm as meter
 import sys
+import logging
 
 
 
@@ -35,6 +36,8 @@ def proccess_image(image):
 
         # Detect the face landmarks
         results = face_mesh.process(image) 
+
+        if  results.multi_face_landmarks is None: return None
 
 
         # To improve performance
@@ -131,6 +134,10 @@ def main(single_image=False, dataset_directory=DATASET_DIRECTORY, processed_imag
             image = cv2.imread(path).copy()
             image = proccess_image(image)
 
+            if image is None: 
+                logging.warning(f'COULD NOT DETECT FACE IN IMAGE {name}')
+                continue
+
             if not os.path.exists(processed_image_directory): os.mkdir(processed_image_directory)
                 
             cv2.imwrite(new_path, image)
@@ -140,6 +147,11 @@ def main(single_image=False, dataset_directory=DATASET_DIRECTORY, processed_imag
             new_path = processed_image_directory+'/'+image_name
             image = cv2.imread(path).copy()
             image = proccess_image(image)
+
+            if image is None: 
+                logging.warning('COULD NOT DETECT FACE IN IMAGE')
+                return None
+                
 
             if not os.path.exists(processed_image_directory): os.mkdir(processed_image_directory)
                 

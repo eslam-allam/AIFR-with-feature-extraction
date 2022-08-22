@@ -15,3 +15,14 @@ saved_models/model586/KNN_model
 saved_models/
 *.txt
 *.log
+app-demo/client/flutter/demo_gui_flutter/android/
+app-demo/client/flutter/demo_gui_flutter/images
+app-demo/client/flutter/demo_gui_flutter/ios
+app-demo/client/flutter/demo_gui_flutter/linux
+app-demo/client/flutter/demo_gui_flutter/macos
+app-demo/client/flutter/demo_gui_flutter/test
+app-demo/client/flutter/demo_gui_flutter/web
+app-demo/client/flutter/demo_gui_flutter/windows
+*.metadata
+*.lock
+app-demo/client/flutter/demo_gui_flutter/analysis_options.yaml
