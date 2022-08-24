@@ -19,7 +19,7 @@ app = Flask(__name__)
 #camera=cv2.VideoCapture(2)
 
 frames = deque(maxlen=20)
-
+current_pic = None
 
 def generate_frames():
     camera = cv2.VideoCapture(0)  
@@ -54,20 +54,30 @@ def hello_world():
 @app.route('/video')
 def video():
     
-    return Response(generate_frames(),mimetype='multipart/x-mixed-replace;boundary=frame')
+    return Response(generate_frames(),mimetype='multipart/x-mixed-replace;boundary=frame', status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
 
 @app.route('/capture', methods=['GET'])
 def capture():
-    image=frames[-1]
-    image = proccess_image(image)
 
-    if image is None: 
-        print('face not found')
-        return Response(status=403, headers={'Access-Control-Allow-Origin ': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade"})
+    global current_pic
+
+    args = request.args
+    save = args.get('save')
     
-    cv2.imwrite('../../test_single_image/test.jpg', image)
-    
-    return Response(status=200, headers={'Access-Control-Allow-Origin ': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade"})
+    if save == 'False':
+        image=frames.pop()
+        image = proccess_image(image)
+        current_pic = image
+
+        if image is None: 
+            print('face not found')
+            return Response(status=403, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade"})
+        image = cv2.imencode('.jpg', image)[1].tobytes()
+
+        return Response(image,status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
+    else:
+         cv2.imwrite('../../test_single_image/test.jpg', current_pic)
+         return Response(status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
     
 @app.route('/processdirectory', methods=['GET'])
 def processdirectory():
