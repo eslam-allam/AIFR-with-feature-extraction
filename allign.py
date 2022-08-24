@@ -35,10 +35,10 @@ def proccess_image(image):
         image.flags.writeable = False
 
         # Detect the face landmarks
-        results = face_mesh.process(image) 
+        results = face_mesh.process(image)
 
-        if  results.multi_face_landmarks is None: return None
-
+        if results.multi_face_landmarks is None: return None
+         
 
         # To improve performance
         image.flags.writeable = True
@@ -46,8 +46,8 @@ def proccess_image(image):
         # Convert back to the BGR color space
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
+        face_landmarks = results.multi_face_landmarks[0] 
         
-        face_landmarks = results.multi_face_landmarks[0]
 
         left_eye_landmarks = [
         face_landmarks.landmark[35] , face_landmarks.landmark[246], face_landmarks.landmark[161], face_landmarks.landmark[160],
@@ -102,6 +102,8 @@ def proccess_image(image):
 
         # To improve performance
         image.flags.writeable = True
+
+        if results.multi_face_landmarks is None: return None
 
         face_landmarks = results.multi_face_landmarks[0] 
 

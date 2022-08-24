@@ -1,15 +1,11 @@
-from ast import arg
-import threading
 from flask import Flask, Response, render_template, request
-from flask import jsonify
 import cv2
 import sys
+from collections import deque
+
 sys.path.append('../..')
 from mediapipecam import face_mesh
-from allign import proccess_image, main
-from collections import deque
-import json
-
+from allign import proccess_image
 
 
 
@@ -56,16 +52,32 @@ def video():
     
     return Response(generate_frames(),mimetype='multipart/x-mixed-replace;boundary=frame', status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
 
-@app.route('/capture', methods=['GET'])
+@app.route('/capture', methods=['GET', 'POST', 'OPTIONS'])
 def capture():
 
     global current_pic
 
     args = request.args
     save = args.get('save')
+    get_result = args.get('getresult') 
+
+    if get_result == 'True':
+        return Response(cv2.imencode('.jpg', current_pic)[1].tobytes(),status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
+
+
     
     if save == 'False':
-        image=frames.pop()
+        if request.method == 'GET':
+            image=frames.pop()
+        else:
+            
+            image = request.files.get('files.myImage')
+            name = image.filename
+            image.save(f'./image_buffer/{name}')
+            
+            image = cv2.imread(f'./image_buffer/{name}')
+            
+
         image = proccess_image(image)
         current_pic = image
 

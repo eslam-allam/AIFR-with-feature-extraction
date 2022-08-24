@@ -55,6 +55,7 @@ dependencies:
   file_picker_cross: ^4.4.2
   desktop_webview_window: ^0.1.6
   file_selector: ^0.8.4+3
+  clay_containers: ^0.3.2
 
 dev_dependencies:
   flutter_test:

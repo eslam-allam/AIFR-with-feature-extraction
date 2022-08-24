@@ -1,4 +1,7 @@
-import 'package:file_picker_cross/file_picker_cross.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:http_parser/http_parser.dart';
+import 'package:clay_containers/widgets/clay_container.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:universal_html/html.dart' as html;
@@ -6,7 +9,6 @@ import 'package:demo_gui_flutter/select_dataset_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:flutter_dropzone/flutter_dropzone.dart';
-import 'package:file_selector/file_selector.dart';
 
 class AddImagePage extends StatefulWidget {
   const AddImagePage({super.key});
@@ -40,9 +42,20 @@ class _AddImagePageState extends State<AddImagePage> {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width / (3 / 2),
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CameraFeed(),
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: CameraFeed(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: IconButton(
+                      onPressed: () => captureAlert(context, null),
+                      icon: const Icon(Icons.camera_alt)),
+                )
+              ],
             ),
           ),
           Container(
@@ -52,82 +65,6 @@ class _AddImagePageState extends State<AddImagePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                ButtonWrap(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      String url = 'http://localhost:5000/capture?save=False';
-                      var response = await http.get(Uri.parse(url));
-                      var code = response.statusCode;
-                      if (code == 403) {
-                        const snackBar = SnackBar(
-                          duration: Duration(seconds: 5),
-                          content: Text(
-                              'Face not detected! Please position your face at the middle of the screen and try again'),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                      } else {
-                        Alert(
-                            context: context,
-                            desc: "Would you like to save this image?",
-                            image: Image.memory(response.bodyBytes),
-                            buttons: [
-                              DialogButton(
-                                color: Colors.transparent,
-                                child: const Icon(
-                                  Icons.delete_forever,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () =>
-                                    Navigator.of(context, rootNavigator: true)
-                                        .pop(),
-                              ),
-                              DialogButton(
-                                color: Colors.transparent,
-                                child: const Icon(
-                                  Icons.check_circle_sharp,
-                                  color: Colors.green,
-                                ),
-                                onPressed: () {
-                                  http.get(
-                                    Uri.parse(
-                                      'http://localhost:5000/capture?save=True',
-                                    ),
-                                  );
-                                  Navigator.of(context, rootNavigator: true)
-                                      .pop();
-                                },
-                              ),
-                            ]).show();
-                      }
-                    },
-                    child: const Text(
-                      'Add Live Image',
-                      textScaleFactor: 2.0,
-                    ),
-                  ),
-                ),
-                ButtonWrap(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final XTypeGroup typeGroup = XTypeGroup(
-                        label: 'Folders',
-                        extensions: <String>['jpg', 'dir'],
-                      );
-                      final XFile? file = await openFile(
-                          acceptedTypeGroups: <XTypeGroup>[typeGroup]);
-
-                      if (file != null) {
-                        debugPrint('${file.name}\nhey');
-                      } else {
-                        debugPrint('No path');
-                      }
-                    },
-                    child: const Text(
-                      'Add directory',
-                      textScaleFactor: 2.0,
-                    ),
-                  ),
-                ),
                 ButtonWrap(
                   child: ElevatedButton(
                     onPressed: () {
@@ -188,6 +125,91 @@ class _AddImagePageState extends State<AddImagePage> {
   }
 }
 
+void captureAlert(
+  BuildContext context,
+  image, {
+  bool fromfile = false,
+  String name = 'unnamed.jpg',
+}) async {
+  http.Response response;
+  int code;
+  String url = 'http://localhost:5000/capture?save=False';
+  if (!fromfile) {
+    response = await http.get(Uri.parse(url));
+  } else {
+    assert(image != null, 'Passed image is null');
+
+    response = await _asyncFileUpload(name, image, url);
+  }
+
+  code = response.statusCode;
+
+  if (code == 403) {
+    const snackBar = SnackBar(
+      duration: Duration(seconds: 5),
+      content: Text(
+          'Face not detected! Please position your face at the middle of the screen and try again'),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  } else {
+    Alert(
+        style: const AlertStyle(
+            backgroundColor: Colors.white70, isCloseButton: false),
+        context: context,
+        desc: "Would you like to save this image?",
+        image: Ink(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white, width: 5),
+            borderRadius: BorderRadius.circular(15),
+            image: DecorationImage(image: MemoryImage(response.bodyBytes)),
+          ),
+          height: 224,
+          width: 224,
+        ),
+        buttons: [
+          DialogButton(
+            color: Colors.red,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: const Text('Delete')),
+                const Icon(
+                  Icons.delete_forever,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+          ),
+          DialogButton(
+            color: Colors.green,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                    padding: const EdgeInsets.only(right: 15),
+                    child: const Text('Save')),
+                const Icon(
+                  Icons.check_circle_sharp,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+            onPressed: () {
+              http.get(
+                Uri.parse(
+                  'http://localhost:5000/capture?save=True',
+                ),
+              );
+              Navigator.of(context, rootNavigator: true).pop();
+            },
+          ),
+        ]).show();
+  }
+}
+
 class ButtonWrap extends StatelessWidget {
   const ButtonWrap({super.key, required this.child});
 
@@ -218,12 +240,12 @@ class CameraFeedState extends State<CameraFeed> {
   @override
   void initState() {
     _element = html.IFrameElement()
-      ..style.height = '100%'
+      ..style.height = '102%'
       ..style.width = '100%'
       ..style.border = '0'
       ..style.cursor = 'None'
       ..srcdoc = """
-          <img src="http://localhost:5000/video" width = "97%" height="auto"/>
+          <img src="http://localhost:5000/video" width = "100%" height="auto%"/>
         """;
 
     // ignore:undefined_prefixed_name
@@ -238,49 +260,47 @@ class CameraFeedState extends State<CameraFeed> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width / 1.5,
-      ),
-      child: Stack(
-        children: [
-          const HtmlElementView(viewType: 'CameraView'),
-          DropzoneView(
-              operation: DragOperation.copy,
-              onCreated: (DropzoneViewController ctrl) => controller = ctrl,
-              onDrop: (dynamic ev) async {
-                Alert(
-                    context: context,
-                    desc: "Would you like to save this image?",
-                    image: Image.memory(await controller.getFileData(ev)),
-                    buttons: [
-                      DialogButton(
-                        color: Colors.transparent,
-                        child: const Icon(
-                          Icons.delete_forever,
-                          color: Colors.red,
-                        ),
-                        onPressed: () =>
-                            Navigator.of(context, rootNavigator: true).pop(),
-                      ),
-                      DialogButton(
-                        color: Colors.transparent,
-                        child: const Icon(
-                          Icons.check_circle_sharp,
-                          color: Colors.green,
-                        ),
-                        onPressed: () {
-                          http.get(
-                            Uri.parse(
-                              'http://localhost:5000/capture?save=True',
-                            ),
-                          );
-                          Navigator.of(context, rootNavigator: true).pop();
-                        },
-                      ),
-                    ]).show();
-              }),
-        ],
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
+      child: ClayContainer(
+        borderRadius: 10,
+        color: const Color(0xff121212),
+        child: Stack(
+          children: [
+            const HtmlElementView(viewType: 'CameraView'),
+            DropzoneView(
+                operation: DragOperation.copy,
+                onCreated: (DropzoneViewController ctrl) => controller = ctrl,
+                onDrop: (dynamic ev) async {
+                  final image = await controller.getFileData(ev);
+                  String name = await controller.getFilename(ev);
+
+                  captureAlert(context, image, fromfile: true, name: name);
+                }),
+          ],
+        ),
       ),
     );
+  }
+}
+
+_asyncFileUpload(String name, Uint8List image, String url) async {
+  //create multipart request for POST or PATCH method
+  var request = http.MultipartRequest("POST", Uri.parse(url));
+  //add text fields
+
+  //create multipart using filepath, string or bytes
+  var pic = http.MultipartFile.fromBytes('files.myImage', image,
+      contentType: MediaType.parse('image/jpeg'), filename: name);
+  //add multipart to request
+  request.files.add(pic);
+
+  http.StreamedResponse responsestream = await request.send();
+
+  if (responsestream.statusCode == 200) {
+    http.Response response = await http.get(Uri.parse('$url&getresult=True'));
+    return response;
+  } else {
+    return http.Response('', 403);
   }
 }

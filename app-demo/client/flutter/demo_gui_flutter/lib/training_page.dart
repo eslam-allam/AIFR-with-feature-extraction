@@ -1,3 +1,4 @@
+import 'package:clay_containers/widgets/clay_container.dart';
 import 'package:demo_gui_flutter/add_image_page.dart';
 import 'package:demo_gui_flutter/select_dataset_page.dart';
 import 'package:flutter/material.dart';
@@ -12,14 +13,18 @@ class TrainingPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
+          color: const Color(0xff121212),
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width / 2,
           ),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Image.asset(
-              'images/facial-recognition-connected-real-estate.png',
-              alignment: Alignment.topCenter,
+            child: ClayContainer(
+              color: const Color(0xff121212),
+              child: Image.asset(
+                'images/facial-recognition-connected-real-estate.png',
+                alignment: Alignment.center,
+              ),
             ),
           ),
         ),

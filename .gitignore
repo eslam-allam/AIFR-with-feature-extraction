@@ -26,3 +26,4 @@ app-demo/client/flutter/demo_gui_flutter/windows
 *.metadata
 *.lock
 app-demo/client/flutter/demo_gui_flutter/analysis_options.yaml
+app-demo/server/image_buffer/
