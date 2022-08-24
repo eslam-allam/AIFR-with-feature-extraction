@@ -1,7 +1,9 @@
+import base64
 from flask import Flask, Response, render_template, request
 import cv2
 import sys
 from collections import deque
+import numpy as np
 
 sys.path.append('../..')
 from mediapipecam import face_mesh
@@ -16,6 +18,7 @@ app = Flask(__name__)
 
 frames = deque(maxlen=20)
 current_pic = None
+name = False
 
 def generate_frames():
     camera = cv2.VideoCapture(0)  
@@ -56,11 +59,12 @@ def video():
 def capture():
 
     global current_pic
+    global name
 
     args = request.args
     save = args.get('save')
     get_result = args.get('getresult') 
-
+   
     if get_result == 'True':
         return Response(cv2.imencode('.jpg', current_pic)[1].tobytes(),status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
 
@@ -69,13 +73,15 @@ def capture():
     if save == 'False':
         if request.method == 'GET':
             image=frames.pop()
+            name = False
         else:
             
             image = request.files.get('files.myImage')
             name = image.filename
-            image.save(f'./image_buffer/{name}')
             
-            image = cv2.imread(f'./image_buffer/{name}')
+            
+            image = np.fromfile(image)
+            image = cv2.imdecode(image, cv2.IMREAD_COLOR)
             
 
         image = proccess_image(image)
@@ -88,8 +94,10 @@ def capture():
 
         return Response(image,status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
     else:
-         cv2.imwrite('../../test_single_image/test.jpg', current_pic)
-         return Response(status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
+        if name: cv2.imwrite(f'../../test_single_image/{name}', current_pic)
+        else:
+            cv2.imwrite('../../test_single_image/test.jpg', current_pic)
+        return Response(status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
     
 @app.route('/processdirectory', methods=['GET'])
 def processdirectory():
