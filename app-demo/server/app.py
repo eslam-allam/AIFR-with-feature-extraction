@@ -7,8 +7,10 @@ import numpy as np
 
 sys.path.append('../..')
 from mediapipecam import face_mesh
-from allign import proccess_image
+from allign import DATASET_DIRECTORY, proccess_image
 
+NEW_IMAGE_DIRECTORY = '/home/eslamallam/Python/AIFR-with-feature-extraction/datasets/FGNET/newImages'
+HEADERS = {'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'}
 
 
 
@@ -53,20 +55,21 @@ def hello_world():
 @app.route('/video')
 def video():
     
-    return Response(generate_frames(),mimetype='multipart/x-mixed-replace;boundary=frame', status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
+    return Response(generate_frames(),mimetype='multipart/x-mixed-replace;boundary=frame', status=200, headers=HEADERS)
 
 @app.route('/capture', methods=['GET', 'POST', 'OPTIONS'])
 def capture():
 
     global current_pic
     global name
-
+    
+    new_image_directory = ''
     args = request.args
     save = args.get('save')
     get_result = args.get('getresult') 
    
     if get_result == 'True':
-        return Response(cv2.imencode('.jpg', current_pic)[1].tobytes(),status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
+        return Response(cv2.imencode('.jpg', current_pic)[1].tobytes(),status=200, headers=HEADERS)
 
 
     
@@ -78,6 +81,10 @@ def capture():
             
             image = request.files.get('files.myImage')
             name = image.filename
+
+            if request.form['directory']: new_image_directory = request.form['directory']
+            if request.form['name']: new_image_directory = request.form['name']
+            else: name = image.filename
             
             
             image = np.fromfile(image)
@@ -89,15 +96,16 @@ def capture():
 
         if image is None: 
             print('face not found')
-            return Response(status=403, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade"})
+            return Response(status=403, headers=HEADERS)
         image = cv2.imencode('.jpg', image)[1].tobytes()
 
-        return Response(image,status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
+        return Response(image,status=200, headers=HEADERS)
     else:
-        if name: cv2.imwrite(f'../../test_single_image/{name}', current_pic)
+        if new_image_directory: cv2.imwrite(f'{new_image_directory}/{name}', current_pic)
         else:
-            cv2.imwrite('../../test_single_image/test.jpg', current_pic)
-        return Response(status=200, headers={'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'})
+            cv2.imwrite(f'{NEW_IMAGE_DIRECTORY}/{name}', current_pic)
+        
+        return Response(status=200, headers=HEADERS)
     
 @app.route('/processdirectory', methods=['GET'])
 def processdirectory():
@@ -106,7 +114,7 @@ def processdirectory():
 
     
     
-    return Response(status=200, headers={'Access-Control-Allow-Origin ': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade"})
+    return Response(status=200, headers=HEADERS)
 
 if __name__=="__main__":
     app.run(host='0.0.0.0',port=5000, threaded=True, use_reloader = False)

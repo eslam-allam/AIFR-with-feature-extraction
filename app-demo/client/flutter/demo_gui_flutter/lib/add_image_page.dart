@@ -8,6 +8,7 @@ import 'package:demo_gui_flutter/select_dataset_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:flutter_dropzone/flutter_dropzone.dart';
+import 'package:custom_radio_grouped_button/custom_radio_grouped_button.dart';
 
 class AddImagePage extends StatefulWidget {
   const AddImagePage({super.key});
@@ -17,6 +18,11 @@ class AddImagePage extends StatefulWidget {
 }
 
 class _AddImagePageState extends State<AddImagePage> {
+  double _accuracyThreshold = 89;
+  double _variableDropout = 0.01;
+  double _knnNeighbors = 5;
+  double _initialDropout = 0.2;
+
   @override
   build(BuildContext context) {
     return Scaffold(
@@ -34,9 +40,182 @@ class _AddImagePageState extends State<AddImagePage> {
         ],
       ),
       body: Container(
+        constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width,
+            maxHeight: MediaQuery.of(context).size.height),
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            fit: BoxFit.fill,
+            image: AssetImage(
+              '/home/eslamallam/Python/AIFR-with-feature-extraction/app-demo/client/flutter/demo_gui_flutter/images/add_image_background.jpg',
+            ),
+          ),
+        ),
         width: MediaQuery.of(context).size.width,
         alignment: Alignment.center,
-        child: const CameraBoxWithButtons(),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Expanded(
+              flex: 4,
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 20, bottom: 40),
+                    child: Text(
+                      'Model Training preferences',
+                      textScaleFactor: 3,
+                      style: TextStyle(
+                        fontFamily: 'moon',
+                        color: Colors.deepPurpleAccent,
+                      ),
+                    ),
+                  ),
+                  FractionallySizedBox(
+                    widthFactor: 1,
+                    child: CustomCheckBoxGroup(
+                      buttonTextStyle: const ButtonTextStyle(
+                        selectedColor: Colors.red,
+                        unSelectedColor: Colors.orange,
+                        textStyle: TextStyle(
+                          fontSize: 16,
+                        ),
+                      ),
+                      unSelectedColor: Theme.of(context).canvasColor,
+                      buttonLables: const [
+                        "Loop",
+                        "Early stop",
+                        "Excel status",
+                        "Variable KNN",
+                      ],
+                      buttonValuesList: const [
+                        "Loop",
+                        "Early stop",
+                        "Excel status",
+                        "Variable KNN",
+                      ],
+                      checkBoxButtonValues: (values) {
+                        print(values);
+                      },
+                      spacing: 0,
+                      width: 150,
+                      horizontal: false,
+                      enableButtonWrap: true,
+                      absoluteZeroSpacing: false,
+                      selectedColor: Theme.of(context).colorScheme.secondary,
+                      padding: 10,
+                      enableShape: true,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 40),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Accuracy Threshold'),
+                              Slider(
+                                label: _accuracyThreshold.toStringAsFixed(2),
+                                value: _accuracyThreshold,
+                                min: 0.0,
+                                max: 100.0,
+                                divisions: 1000,
+                                onChanged: (value) {
+                                  setState(
+                                    () {
+                                      _accuracyThreshold = value;
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Initial Dropout'),
+                              Slider(
+                                label: _initialDropout.toStringAsFixed(2),
+                                value: _initialDropout,
+                                min: 0.0,
+                                max: 0.6,
+                                divisions: 6,
+                                onChanged: (value) {
+                                  setState(
+                                    () {
+                                      _initialDropout = value;
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 40),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('KNN Neighbors'),
+                              Slider(
+                                label: _knnNeighbors.toStringAsFixed(2),
+                                value: _knnNeighbors,
+                                min: 1,
+                                max: 10,
+                                divisions: 9,
+                                onChanged: (value) {
+                                  setState(
+                                    () {
+                                      _knnNeighbors = value;
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Variable Dropout'),
+                              Slider(
+                                label: _variableDropout.toStringAsFixed(2),
+                                value: _variableDropout,
+                                min: 0.0,
+                                max: 0.6,
+                                divisions: 60,
+                                onChanged: (value) {
+                                  setState(
+                                    () {
+                                      _variableDropout = value;
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextFormField(),
+                  const TwoButtonRow()
+                ],
+              ),
+            ),
+            const Expanded(
+              flex: 6,
+              child: CameraBoxWithButtons(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -49,37 +228,30 @@ class CameraBoxWithButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FractionallySizedBox(
-      widthFactor: 0.59,
-      child: ClayContainer(
-        color: const Color(0xff121212),
-        borderRadius: 10,
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
+    return ClayContainer(
+      color: const Color(0xff121212),
+      borderRadius: 10,
+      child: FractionallySizedBox(
+        alignment: Alignment.centerRight,
+        widthFactor: 1,
+        child: Stack(
+          alignment: Alignment.topLeft,
           children: [
-            Expanded(
-              flex: 9,
-              child: Stack(
-                alignment: Alignment.topLeft,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: CameraFeed(),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20.0, left: 20.0),
-                    child: IconButton(
-                      onPressed: () => captureAlert(context, null),
-                      icon: const Icon(Icons.camera_alt),
-                      iconSize: 50,
-                    ),
-                  )
-                ],
-              ),
+            const Padding(
+              padding: EdgeInsets.all(30),
+              child: CameraFeed(),
             ),
-            const ThreeButtonRow(),
+            Padding(
+              padding: const EdgeInsets.only(top: 40.0, left: 40.0),
+              child: IconButton(
+                onPressed: () => captureAlert(context, null),
+                icon: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.black,
+                ),
+                iconSize: 60,
+              ),
+            )
           ],
         ),
       ),
@@ -87,70 +259,83 @@ class CameraBoxWithButtons extends StatelessWidget {
   }
 }
 
-class ThreeButtonRow extends StatelessWidget {
-  const ThreeButtonRow({
+class TwoButtonRow extends StatelessWidget {
+  const TwoButtonRow({
     Key? key,
   }) : super(key: key);
+  final double _buttonwidthfactor = 0.8;
+  final double _buttonheightfactor = 0.8;
+  final double _buttonborderradius = 50;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       flex: 1,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          ButtonWrap(
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (BuildContext context) {
-                      return const SelectDatasetPage();
-                    },
+      child: FractionallySizedBox(
+        heightFactor: 0.2,
+        child: Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ButtonWrap(
+              child: FractionallySizedBox(
+                heightFactor: _buttonheightfactor,
+                widthFactor: _buttonwidthfactor,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    primary: Colors.orange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                          _buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
+                    ),
                   ),
-                );
-              },
-              child: const Text(
-                'Process dataset',
-                textScaleFactor: 2.0,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (BuildContext context) {
+                          return const SelectDatasetPage();
+                        },
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Train Model',
+                    textScaleFactor: 1.7,
+                  ),
+                ),
               ),
             ),
-          ),
-          ButtonWrap(
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (BuildContext context) {
-                      return const SelectDatasetPage();
-                    },
+            ButtonWrap(
+              child: FractionallySizedBox(
+                heightFactor: _buttonheightfactor,
+                widthFactor: _buttonwidthfactor,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    primary: Colors.orange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                          _buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
+                    ),
                   ),
-                );
-              },
-              child: const Text(
-                'Train Model',
-                textScaleFactor: 2.0,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (BuildContext context) {
+                          return const SelectDatasetPage();
+                        },
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Save Model',
+                    textScaleFactor: 1.7,
+                  ),
+                ),
               ),
             ),
-          ),
-          ButtonWrap(
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (BuildContext context) {
-                      return const SelectDatasetPage();
-                    },
-                  ),
-                );
-              },
-              child: const Text(
-                'Save Model',
-                textScaleFactor: 2.0,
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -314,6 +499,8 @@ _asyncFileUpload(String name, Uint8List image, String url) async {
   var pic = http.MultipartFile.fromBytes('files.myImage', image,
       contentType: MediaType.parse('image/jpeg'), filename: name);
   //add multipart to request
+  request.fields['name'] = name;
+  request.fields['directory'] = '';
   request.files.add(pic);
 
   http.StreamedResponse responsestream = await request.send();

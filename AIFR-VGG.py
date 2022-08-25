@@ -425,7 +425,7 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
         del model, history, fused_vector, test_vector, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3
         classifier, predicted
         if not loop: break
-        elif variable_dropout is not None: 
+        elif variable_dropout is not None and variable_dropout != 0.0: 
             drop_out += variable_dropout
             mylogs.info(f'VARIABLE DROPOUT ENABLED, CURRENT DROPOUT = {drop_out}')
             assert drop_out <= 0.6, 'DROP OUT TOO HIGH, ABORTING'
