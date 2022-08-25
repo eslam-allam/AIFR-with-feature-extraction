@@ -33,88 +33,121 @@ class _AddImagePageState extends State<AddImagePage> {
           ),
         ],
       ),
-      body: Row(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.center,
+      body: Container(
+        width: MediaQuery.of(context).size.width,
+        alignment: Alignment.center,
+        child: const CameraBoxWithButtons(),
+      ),
+    );
+  }
+}
+
+class CameraBoxWithButtons extends StatelessWidget {
+  const CameraBoxWithButtons({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      widthFactor: 0.59,
+      child: ClayContainer(
+        color: const Color(0xff121212),
+        borderRadius: 10,
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              flex: 9,
+              child: Stack(
+                alignment: Alignment.topLeft,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: CameraFeed(),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20.0, left: 20.0),
+                    child: IconButton(
+                      onPressed: () => captureAlert(context, null),
+                      icon: const Icon(Icons.camera_alt),
+                      iconSize: 50,
+                    ),
+                  )
+                ],
+              ),
+            ),
+            const ThreeButtonRow(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ThreeButtonRow extends StatelessWidget {
+  const ThreeButtonRow({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      flex: 1,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
-            flex: 6,
-            child: Stack(
-              alignment: Alignment.topLeft,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: CameraFeed(),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 20.0, left: 20.0),
-                  child: IconButton(
-                    onPressed: () => captureAlert(context, null),
-                    icon: const Icon(Icons.camera_alt),
-                    iconSize: 50,
+          ButtonWrap(
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (BuildContext context) {
+                      return const SelectDatasetPage();
+                    },
                   ),
-                )
-              ],
+                );
+              },
+              child: const Text(
+                'Process dataset',
+                textScaleFactor: 2.0,
+              ),
             ),
           ),
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                ButtonWrap(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (BuildContext context) {
-                            return const SelectDatasetPage();
-                          },
-                        ),
-                      );
+          ButtonWrap(
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (BuildContext context) {
+                      return const SelectDatasetPage();
                     },
-                    child: const Text(
-                      'Process dataset',
-                      textScaleFactor: 2.0,
-                    ),
                   ),
-                ),
-                ButtonWrap(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (BuildContext context) {
-                            return const SelectDatasetPage();
-                          },
-                        ),
-                      );
+                );
+              },
+              child: const Text(
+                'Train Model',
+                textScaleFactor: 2.0,
+              ),
+            ),
+          ),
+          ButtonWrap(
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (BuildContext context) {
+                      return const SelectDatasetPage();
                     },
-                    child: const Text(
-                      'Train Model',
-                      textScaleFactor: 2.0,
-                    ),
                   ),
-                ),
-                ButtonWrap(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (BuildContext context) {
-                            return const SelectDatasetPage();
-                          },
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Save Model',
-                      textScaleFactor: 2.0,
-                    ),
-                  ),
-                ),
-              ],
+                );
+              },
+              child: const Text(
+                'Save Model',
+                textScaleFactor: 2.0,
+              ),
             ),
           ),
         ],
@@ -232,21 +265,17 @@ class CameraFeed extends StatefulWidget {
 }
 
 class CameraFeedState extends State<CameraFeed> {
-  late html.IFrameElement _element;
+  late html.ImageElement _element;
   late DropzoneViewController controller;
 
   @override
   void initState() {
-    _element = html.IFrameElement()
+    _element = html.ImageElement()
       ..style.height = '100%'
       ..style.width = '100%'
       ..style.border = '0'
       ..style.cursor = 'None'
-      ..srcdoc = """
-          
-          <img  src="http://localhost:5000/video" width=100%; height="100%"/>
-          
-        """;
+      ..src = "http://localhost:5000/video";
 
     // ignore:undefined_prefixed_name
     ui.platformViewRegistry.registerViewFactory(
@@ -259,24 +288,19 @@ class CameraFeedState extends State<CameraFeed> {
 
   @override
   Widget build(BuildContext context) {
-    return ClayContainer(
-      borderRadius: 10,
-      color: const Color(0xff121212),
-      child: Stack(
-        fit: StackFit.loose,
-        children: [
-          const HtmlElementView(viewType: 'CameraView'),
-          DropzoneView(
-              operation: DragOperation.copy,
-              onCreated: (DropzoneViewController ctrl) => controller = ctrl,
-              onDrop: (dynamic ev) async {
-                final image = await controller.getFileData(ev);
-                String name = await controller.getFilename(ev);
+    return Stack(
+      children: [
+        const HtmlElementView(viewType: 'CameraView'),
+        DropzoneView(
+            operation: DragOperation.copy,
+            onCreated: (DropzoneViewController ctrl) => controller = ctrl,
+            onDrop: (dynamic ev) async {
+              final image = await controller.getFileData(ev);
+              String name = await controller.getFilename(ev);
 
-                captureAlert(context, image, fromfile: true, name: name);
-              }),
-        ],
-      ),
+              captureAlert(context, image, fromfile: true, name: name);
+            }),
+      ],
     );
   }
 }
