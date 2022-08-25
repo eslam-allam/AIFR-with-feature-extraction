@@ -922,6 +922,7 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_face_mesh = mp.solutions.face_mesh
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
+from threading import Thread
 
 
 class forthWindow(Screen):
@@ -936,10 +937,21 @@ class forthWindow(Screen):
         layout.add_widget(self.img1)
         layout.add_widget(button)
         # opencv2 stuffs
-        self.capture = cv2.VideoCapture(0)
+        self.capture = cv2.VideoCapture(1)
+        trainingClassInstance.loadLatest()
         Clock.schedule_interval(self.update, 1.0 / 33.0)
-        Clock.schedule_interval(self.saperatePrediction, 1)
+        # Clock.schedule_interval(self.saperatePrediction, 1)
+        # Clock.schedule_interval(self.threadTry, 5)
         self.add_widget(layout)
+
+    def threadTry(self, idk):
+        # print("inside thread try")
+        self.update(5)
+        t = Thread(target=self.saperatePrediction)
+        t.start()
+        while t.is_alive():
+            self.update(5)
+        t.join
 
     def process_and_save_image(self):
         processed_image = proccess_image(self.image_cap)
@@ -960,6 +972,7 @@ class forthWindow(Screen):
         return path
 
     def update(self, dt):
+        # print("inside thread try")
         # display image from cam in opencv window
         success, image = self.capture.read()
 
@@ -984,9 +997,33 @@ class forthWindow(Screen):
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
             if results.multi_face_landmarks:
+
                 # predict if there is detaction
                 # processed_image = proccess_image(self.image_cap)
                 for face_landmarks in results.multi_face_landmarks:
+                    processed_image = proccess_image(self.image_cap)
+                    if not os.path.exists(PROCESSED_IMAGE_DIRECTORY):
+                        os.mkdir(PROCESSED_IMAGE_DIRECTORY)
+                    image_names = os.listdir(PROCESSED_IMAGE_DIRECTORY)
+                    print("here")
+                    if not image_names:
+                        name = "processed_capture_0.jpg"
+                    else:
+                        image_names = [
+                            name for name in image_names if "processed_capture_" in name
+                        ]
+                        name = f"processed_capture_{len(image_names)}.jpg"
+
+                    path = PROCESSED_IMAGE_DIRECTORY + "/" + name
+
+                    try:
+                        if processed_image is not None:
+                            cv2.imwrite(path, processed_image)
+                    except:
+                        print(processed_image)
+                    # self.predictLive(path)
+                    trainingClassInstance.predictWMOdel2(path)
+
                     mp_drawing.draw_landmarks(
                         image=image,
                         landmark_list=face_landmarks,
@@ -1020,7 +1057,7 @@ class forthWindow(Screen):
 
         return image
 
-    def saperatePrediction(self, idk):
+    def saperatePrediction(self):
         success, image = self.capture.read()
 
         with mp_face_mesh.FaceMesh(

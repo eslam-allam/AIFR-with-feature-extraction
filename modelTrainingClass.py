@@ -354,8 +354,9 @@ class modelTrainingClass:
         self.showOneImgprediction(predicted, imgPath)
         return predicted
 
-    def predictWMOdel2(self, imgPath, model):
-
+    def loadLatest(self):
+        global m1, m2, pooling, Ax1, Ay1, Ax2, Ay2, Ax3, Ay3, classifier
+        model = self.getLastModel()
         m1 = tf.keras.models.load_model(model + "/fc1_model.h5")
         m2 = tf.keras.models.load_model(model + "/fc2_model.h5")
         pooling = tf.keras.models.load_model(model + "/pooling_model.h5")
@@ -368,6 +369,12 @@ class modelTrainingClass:
 
         Ax3 = np.load(model + "\Atransform3.npy")
         Ay3 = np.load(model + "\Ytransform3.npy")
+
+        with open(model + "\KNN_model", "rb") as f:
+
+            classifier = pickle.load(f)
+
+    def predictWMOdel2(self, imgPath):
 
         images_array = np.ndarray((1, 224, 224, 3), dtype="int32")
         print(imgPath)
@@ -402,13 +409,9 @@ class modelTrainingClass:
 
         test_vector = test_vector3.T
 
-        with open(model + "\KNN_model", "rb") as f:
-
-            classifier = pickle.load(f)
-
         predicted = classifier.predict(test_vector)
 
-        print("From model " + model)
+        # print("From model " + model)
         print(predicted)
         # self.showOneImgprediction(predicted, imgPath)
         return predicted
