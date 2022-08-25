@@ -49,7 +49,7 @@ class CamApp(App):
         layout.add_widget(self.img1)
         layout.add_widget(button)
         # opencv2 stuffs
-        self.capture = cv2.VideoCapture(1)
+        self.capture = cv2.VideoCapture(0)
         Clock.schedule_interval(self.update, 1.0 / 33.0)
 
         return layout

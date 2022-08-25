@@ -937,7 +937,7 @@ class forthWindow(Screen):
         layout.add_widget(self.img1)
         layout.add_widget(button)
         # opencv2 stuffs
-        self.capture = cv2.VideoCapture(1)
+        self.capture = cv2.VideoCapture(0)
         trainingClassInstance.loadLatest()
         Clock.schedule_interval(self.update, 1.0 / 33.0)
         # Clock.schedule_interval(self.saperatePrediction, 1)
@@ -997,32 +997,31 @@ class forthWindow(Screen):
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
             if results.multi_face_landmarks:
+                processed_image = proccess_image(self.image_cap)
+                if not os.path.exists(PROCESSED_IMAGE_DIRECTORY):
+                    os.mkdir(PROCESSED_IMAGE_DIRECTORY)
+                image_names = os.listdir(PROCESSED_IMAGE_DIRECTORY)
+                print("here")
+                if not image_names:
+                    name = "processed_capture_0.jpg"
+                else:
+                    image_names = [
+                        name for name in image_names if "processed_capture_" in name
+                    ]
+                    name = f"processed_capture_{len(image_names)}.jpg"
 
+                path = PROCESSED_IMAGE_DIRECTORY + "/" + name
+
+                try:
+                    if processed_image is not None:
+                        cv2.imwrite(path, processed_image)
+                except:
+                    print(processed_image)
+                # self.predictLive(path)
+                trainingClassInstance.predictWMOdel2(path)
                 # predict if there is detaction
                 # processed_image = proccess_image(self.image_cap)
                 for face_landmarks in results.multi_face_landmarks:
-                    processed_image = proccess_image(self.image_cap)
-                    if not os.path.exists(PROCESSED_IMAGE_DIRECTORY):
-                        os.mkdir(PROCESSED_IMAGE_DIRECTORY)
-                    image_names = os.listdir(PROCESSED_IMAGE_DIRECTORY)
-                    print("here")
-                    if not image_names:
-                        name = "processed_capture_0.jpg"
-                    else:
-                        image_names = [
-                            name for name in image_names if "processed_capture_" in name
-                        ]
-                        name = f"processed_capture_{len(image_names)}.jpg"
-
-                    path = PROCESSED_IMAGE_DIRECTORY + "/" + name
-
-                    try:
-                        if processed_image is not None:
-                            cv2.imwrite(path, processed_image)
-                    except:
-                        print(processed_image)
-                    # self.predictLive(path)
-                    trainingClassInstance.predictWMOdel2(path)
 
                     mp_drawing.draw_landmarks(
                         image=image,
