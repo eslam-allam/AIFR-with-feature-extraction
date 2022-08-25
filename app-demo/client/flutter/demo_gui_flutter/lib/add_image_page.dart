@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:http_parser/http_parser.dart';
 import 'package:clay_containers/widgets/clay_container.dart';
@@ -36,32 +35,31 @@ class _AddImagePageState extends State<AddImagePage> {
       ),
       body: Row(
         mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width / (3 / 2),
-            ),
+          Expanded(
+            flex: 6,
             child: Stack(
-              alignment: Alignment.bottomCenter,
+              alignment: Alignment.topLeft,
               children: [
                 const Padding(
                   padding: EdgeInsets.all(8.0),
                   child: CameraFeed(),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
+                  padding: const EdgeInsets.only(top: 20.0, left: 20.0),
                   child: IconButton(
-                      onPressed: () => captureAlert(context, null),
-                      icon: const Icon(Icons.camera_alt)),
+                    onPressed: () => captureAlert(context, null),
+                    icon: const Icon(Icons.camera_alt),
+                    iconSize: 50,
+                  ),
                 )
               ],
             ),
           ),
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width / 3,
-            ),
+          Expanded(
+            flex: 4,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -240,12 +238,14 @@ class CameraFeedState extends State<CameraFeed> {
   @override
   void initState() {
     _element = html.IFrameElement()
-      ..style.height = '102%'
+      ..style.height = '100%'
       ..style.width = '100%'
       ..style.border = '0'
       ..style.cursor = 'None'
       ..srcdoc = """
-          <img src="http://localhost:5000/video" width = "100%" height="auto%"/>
+          
+          <img  src="http://localhost:5000/video" width=100%; height="100%"/>
+          
         """;
 
     // ignore:undefined_prefixed_name
@@ -259,26 +259,23 @@ class CameraFeedState extends State<CameraFeed> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints:
-          BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
-      child: ClayContainer(
-        borderRadius: 10,
-        color: const Color(0xff121212),
-        child: Stack(
-          children: [
-            const HtmlElementView(viewType: 'CameraView'),
-            DropzoneView(
-                operation: DragOperation.copy,
-                onCreated: (DropzoneViewController ctrl) => controller = ctrl,
-                onDrop: (dynamic ev) async {
-                  final image = await controller.getFileData(ev);
-                  String name = await controller.getFilename(ev);
+    return ClayContainer(
+      borderRadius: 10,
+      color: const Color(0xff121212),
+      child: Stack(
+        fit: StackFit.loose,
+        children: [
+          const HtmlElementView(viewType: 'CameraView'),
+          DropzoneView(
+              operation: DragOperation.copy,
+              onCreated: (DropzoneViewController ctrl) => controller = ctrl,
+              onDrop: (dynamic ev) async {
+                final image = await controller.getFileData(ev);
+                String name = await controller.getFilename(ev);
 
-                  captureAlert(context, image, fromfile: true, name: name);
-                }),
-          ],
-        ),
+                captureAlert(context, image, fromfile: true, name: name);
+              }),
+        ],
       ),
     );
   }
