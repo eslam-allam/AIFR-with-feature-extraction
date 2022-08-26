@@ -42,6 +42,7 @@ import gc
 import random
 import subprocess
 
+
 tf.get_logger().setLevel(logging.CRITICAL)
 mylogs = logging.getLogger(__name__)
 mylogs.setLevel(logging.DEBUG)
@@ -120,7 +121,10 @@ def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
         temp_image = cv2.imread(directory + image)
         images_array[i] = temp_image
         label = image.split('.')[0].split('A')
-        label, age = int(label[0]) -1 , label[1]
+        label[1] = re.sub(r'[aA-zZ]+', '', label[1])
+        label = label[0].split('-') + [label[1]]
+        if len(label) == 3: name, label, age = label[0],int(label[1]) -1 , label[1]
+        else: label, age = int(label[0]) -1 , label[1]
         ages[i] = re.sub(r'[aA-zZ]+', '', age )
         labels[i] = label
     

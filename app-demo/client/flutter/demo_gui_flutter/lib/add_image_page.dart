@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:clay_containers/widgets/clay_container.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,13 @@ class _AddImagePageState extends State<AddImagePage> {
   double _variableDropout = 0.01;
   double _knnNeighbors = 5;
   double _initialDropout = 0.2;
+  bool _loop = false,
+      _earlyStop = true,
+      _excelStats = true,
+      _variableKNN = true;
+  final _nameController = TextEditingController();
+  final _ageController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   build(BuildContext context) {
@@ -82,27 +90,53 @@ class _AddImagePageState extends State<AddImagePage> {
                         ),
                       ),
                       unSelectedColor: Theme.of(context).canvasColor,
+                      defaultSelected: const [
+                        "Early stop",
+                        "Excel stats",
+                        "Variable KNN",
+                      ],
                       buttonLables: const [
                         "Loop",
                         "Early stop",
-                        "Excel status",
+                        "Excel stats",
                         "Variable KNN",
                       ],
                       buttonValuesList: const [
                         "Loop",
                         "Early stop",
-                        "Excel status",
+                        "Excel stats",
                         "Variable KNN",
                       ],
                       checkBoxButtonValues: (values) {
-                        print(values);
+                        setState(() {
+                          if (values.contains('Loop')) {
+                            _loop = true;
+                          } else {
+                            _loop = false;
+                          }
+                          if (values.contains('Early stop')) {
+                            _earlyStop = true;
+                          } else {
+                            _earlyStop = false;
+                          }
+                          if (values.contains('Excel stats')) {
+                            _excelStats = true;
+                          } else {
+                            _excelStats = false;
+                          }
+                          if (values.contains('Variable KNN')) {
+                            _variableKNN = true;
+                          } else {
+                            _variableKNN = false;
+                          }
+                        });
                       },
                       spacing: 0,
                       width: 150,
                       horizontal: false,
                       enableButtonWrap: true,
                       absoluteZeroSpacing: false,
-                      selectedColor: Theme.of(context).colorScheme.secondary,
+                      selectedColor: Colors.white,
                       padding: 10,
                       enableShape: true,
                     ),
@@ -124,7 +158,8 @@ class _AddImagePageState extends State<AddImagePage> {
                                 onChanged: (value) {
                                   setState(
                                     () {
-                                      _accuracyThreshold = value;
+                                      _accuracyThreshold = double.parse(
+                                          value.toStringAsFixed(2));
                                     },
                                   );
                                 },
@@ -145,7 +180,8 @@ class _AddImagePageState extends State<AddImagePage> {
                                 onChanged: (value) {
                                   setState(
                                     () {
-                                      _initialDropout = value;
+                                      _initialDropout = double.parse(
+                                          value.toStringAsFixed(2));
                                     },
                                   );
                                 },
@@ -173,7 +209,8 @@ class _AddImagePageState extends State<AddImagePage> {
                                 onChanged: (value) {
                                   setState(
                                     () {
-                                      _knnNeighbors = value;
+                                      _knnNeighbors = double.parse(
+                                          value.toStringAsFixed(2));
                                     },
                                   );
                                 },
@@ -194,7 +231,8 @@ class _AddImagePageState extends State<AddImagePage> {
                                 onChanged: (value) {
                                   setState(
                                     () {
-                                      _variableDropout = value;
+                                      _variableDropout = double.parse(
+                                          value.toStringAsFixed(2));
                                     },
                                   );
                                 },
@@ -205,8 +243,53 @@ class _AddImagePageState extends State<AddImagePage> {
                       ],
                     ),
                   ),
-                  TextFormField(),
-                  const TwoButtonRow()
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 20, top: 20),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FractionallySizedBox(
+                              widthFactor: 0.6,
+                              child: TextNumberInput(
+                                controller: _nameController,
+                                label: 'Your Name:',
+                                text: true,
+                                maxlen: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 20, top: 20),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FractionallySizedBox(
+                              widthFactor: 0.6,
+                              child: TextNumberInput(
+                                controller: _ageController,
+                                label: 'Age:',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TwoButtonRow(
+                      _formKey,
+                      _nameController,
+                      _ageController,
+                      _knnNeighbors,
+                      _variableDropout,
+                      _accuracyThreshold,
+                      _initialDropout,
+                      _loop,
+                      _earlyStop,
+                      _excelStats,
+                      _variableKNN)
                 ],
               ),
             ),
@@ -260,12 +343,27 @@ class CameraBoxWithButtons extends StatelessWidget {
 }
 
 class TwoButtonRow extends StatelessWidget {
-  const TwoButtonRow({
+  const TwoButtonRow(
+    this.formKey,
+    this.nameController,
+    this.ageController,
+    this.knnNeighbors,
+    this.variableDropout,
+    this.accuracyThreshold,
+    this.initialDropout,
+    this.loop,
+    this.earlyStop,
+    this.excelStats,
+    this.variableKNN, {
     Key? key,
   }) : super(key: key);
   final double _buttonwidthfactor = 0.8;
   final double _buttonheightfactor = 0.8;
   final double _buttonborderradius = 50;
+  final TextEditingController? nameController, ageController;
+  final double knnNeighbors, variableDropout, accuracyThreshold, initialDropout;
+  final bool loop, earlyStop, excelStats, variableKNN;
+  final GlobalKey<FormState> formKey;
 
   @override
   Widget build(BuildContext context) {
@@ -291,13 +389,17 @@ class TwoButtonRow extends StatelessWidget {
                     ),
                   ),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (BuildContext context) {
-                          return const SelectDatasetPage();
-                        },
-                      ),
-                    );
+                    if (!formKey.currentState!.validate()) {
+                      // If the form is valid, display a snackbar. In the real world,
+                      // you'd often call a server or save the information in a database.
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Please fill the required fields')),
+                      );
+                    } else {
+                      debugPrint(
+                          'Name: ${nameController?.text}\nAge: ${ageController?.text}\nloop: $loop, Early Stop: $earlyStop\nExcel stats: $excelStats, Variable KNN: $variableKNN\n Accuracy Threshold: $accuracyThreshold, Initial Dropout: $initialDropout\nKNN neighbors: $knnNeighbors\nVariable Dropout: $variableDropout');
+                    }
                   },
                   child: const Text(
                     'Train Model',
@@ -511,4 +613,78 @@ _asyncFileUpload(String name, Uint8List image, String url) async {
   } else {
     return http.Response('', 403);
   }
+}
+
+class TextNumberInput extends StatelessWidget {
+  const TextNumberInput(
+      {Key? key,
+      required this.label,
+      this.controller,
+      this.value,
+      this.onChanged,
+      this.error,
+      this.icon,
+      this.allowDecimal = false,
+      this.text = false,
+      this.maxlen = 2})
+      : super(key: key);
+
+  final TextEditingController? controller;
+
+  final String? value;
+
+  final String label;
+
+  final Function? onChanged;
+
+  final String? error;
+
+  final Widget? icon;
+
+  final bool allowDecimal;
+
+  final bool text;
+
+  final int maxlen;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          String _errorMessage() =>
+              text ? 'Please enter your name' : 'Please enter your age';
+          return _errorMessage();
+        }
+        return null;
+      },
+      maxLength: maxlen,
+      controller: controller,
+      initialValue: value,
+      onChanged: onChanged as void Function(String)?,
+      readOnly: false,
+      keyboardType: text
+          ? TextInputType.text
+          : TextInputType.numberWithOptions(decimal: allowDecimal),
+      inputFormatters: <TextInputFormatter>[
+        FilteringTextInputFormatter.allow(RegExp(_getRegexString())),
+        TextInputFormatter.withFunction(
+          (oldValue, newValue) => newValue.copyWith(
+            text: newValue.text.replaceAll('.', ','),
+          ),
+        ),
+      ],
+      decoration: InputDecoration(
+        label: Text(label),
+        errorText: error,
+        icon: icon,
+      ),
+    );
+  }
+
+  String _getRegexString() => text
+      ? r'[aA-zZ]+'
+      : allowDecimal
+          ? r'[0-9]+[,.]{0,1}[0-9]*'
+          : r'[0-9]';
 }
