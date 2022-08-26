@@ -112,7 +112,7 @@ def capture():
             
             if last_name != name: last_id = last_id + 1
             
-            name = f'{str(last_id).zfill(3)}-{name}A{age}.jpg'
+            name = f'{str(last_id).zfill(3)}-{name}A{age.zfill(2)}.jpg'
             
             if new_image_directory: cv2.imwrite(f'{new_image_directory}/{name}', current_pic)
             else:

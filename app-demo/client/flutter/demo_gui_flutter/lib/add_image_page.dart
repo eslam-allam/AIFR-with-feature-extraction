@@ -33,10 +33,13 @@ class _AddImagePageState extends State<AddImagePage> {
 
   @override
   build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+    var padding = MediaQuery.of(context).viewPadding;
+    double heightNoToolbar = height - padding.top - kToolbarHeight;
+    double edge20 = (width * 0.01 + heightNoToolbar * 0.02) / 2;
     return Container(
-      constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width,
-          maxHeight: MediaQuery.of(context).size.height),
+      constraints: BoxConstraints(maxWidth: width, maxHeight: heightNoToolbar),
       decoration: const BoxDecoration(
         image: DecorationImage(
           fit: BoxFit.fill,
@@ -45,7 +48,7 @@ class _AddImagePageState extends State<AddImagePage> {
           ),
         ),
       ),
-      width: MediaQuery.of(context).size.width,
+      width: width,
       alignment: Alignment.center,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -59,7 +62,7 @@ class _AddImagePageState extends State<AddImagePage> {
                   child: Column(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(left: 20, top: 20),
+                        padding: EdgeInsets.only(left: edge20, top: edge20),
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: FractionallySizedBox(
@@ -74,7 +77,7 @@ class _AddImagePageState extends State<AddImagePage> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(left: 20, top: 20),
+                        padding: EdgeInsets.only(left: edge20, top: edge20),
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: FractionallySizedBox(
@@ -89,12 +92,12 @@ class _AddImagePageState extends State<AddImagePage> {
                     ],
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 20, bottom: 40),
+                Padding(
+                  padding: EdgeInsets.only(top: edge20, bottom: edge20 * 3),
                   child: Text(
                     'Model Training preferences',
-                    textScaleFactor: 3,
-                    style: TextStyle(
+                    textScaleFactor: edge20 * 0.15,
+                    style: const TextStyle(
                       fontFamily: 'moon',
                       color: Colors.deepPurpleAccent,
                     ),
@@ -103,11 +106,11 @@ class _AddImagePageState extends State<AddImagePage> {
                 FractionallySizedBox(
                   widthFactor: 1,
                   child: CustomCheckBoxGroup(
-                    buttonTextStyle: const ButtonTextStyle(
+                    buttonTextStyle: ButtonTextStyle(
                       selectedColor: Colors.orange,
                       unSelectedColor: Colors.orange,
                       textStyle: TextStyle(
-                        fontSize: 16,
+                        fontSize: edge20 * 0.8,
                       ),
                     ),
                     unSelectedColor: Theme.of(context).canvasColor,
@@ -153,17 +156,17 @@ class _AddImagePageState extends State<AddImagePage> {
                       });
                     },
                     spacing: 0,
-                    width: 150,
+                    width: edge20 * 7.5,
                     horizontal: false,
                     enableButtonWrap: true,
                     absoluteZeroSpacing: false,
                     selectedColor: Colors.white38,
-                    padding: 10,
+                    padding: edge20 * 0.5,
                     enableShape: true,
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 40),
+                  padding: EdgeInsets.only(top: edge20 * 3),
                   child: Row(
                     children: [
                       Expanded(
@@ -218,7 +221,7 @@ class _AddImagePageState extends State<AddImagePage> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 40),
+                  padding: EdgeInsets.only(top: edge20 * 3),
                   child: Row(
                     children: [
                       Expanded(
@@ -308,6 +311,12 @@ class CameraBoxWithButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+    double height = MediaQuery.of(context).size.height;
+    var padding = MediaQuery.of(context).viewPadding;
+    double height_no_toolbar = height - padding.top - kToolbarHeight;
+
+    double edge20 = (width * 0.01 + height_no_toolbar * 0.02) / 2;
     return ClayContainer(
       color: const Color(0xff121212),
       borderRadius: 10,
@@ -318,11 +327,11 @@ class CameraBoxWithButtons extends StatelessWidget {
           alignment: Alignment.topLeft,
           children: [
             Padding(
-              padding: const EdgeInsets.all(30),
+              padding: EdgeInsets.all(edge20 * 1.5),
               child: CameraFeed(formKey, nameController, ageController),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 40.0, left: 40.0),
+              padding: EdgeInsets.only(top: edge20 * 2, left: edge20 * 2),
               child: IconButton(
                 onPressed: () {
                   if (!formKey.currentState!.validate()) {
@@ -341,7 +350,7 @@ class CameraBoxWithButtons extends StatelessWidget {
                   Icons.camera_alt,
                   color: Colors.black,
                 ),
-                iconSize: 60,
+                iconSize: edge20 * 3,
               ),
             )
           ],
@@ -372,6 +381,8 @@ class TwoButtonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+    double edge20 = width * 0.01;
     return Expanded(
       flex: 1,
       child: FractionallySizedBox(
@@ -397,9 +408,9 @@ class TwoButtonRow extends StatelessWidget {
                     debugPrint(
                         'loop: $loop, Early Stop: $earlyStop\nExcel stats: $excelStats, Variable KNN: $variableKNN\n Accuracy Threshold: $accuracyThreshold, Initial Dropout: $initialDropout\nKNN neighbors: $knnNeighbors\nVariable Dropout: $variableDropout');
                   },
-                  child: const Text(
+                  child: Text(
                     'Train Model',
-                    textScaleFactor: 1.7,
+                    textScaleFactor: edge20 * 0.085,
                   ),
                 ),
               ),
@@ -425,9 +436,9 @@ class TwoButtonRow extends StatelessWidget {
                       ),
                     );
                   },
-                  child: const Text(
+                  child: Text(
                     'Save Model',
-                    textScaleFactor: 1.7,
+                    textScaleFactor: edge20 * 0.085,
                   ),
                 ),
               ),
@@ -523,12 +534,29 @@ void captureAlert(
                 ),
               ],
             ),
-            onPressed: () {
-              http.get(
+            onPressed: () async {
+              response = await http.get(
                 Uri.parse(
                   'http://localhost:5000/capture?save=True&name=$name&age=$age',
                 ),
               );
+              if (response.statusCode == 200) {
+                const snackBar = SnackBar(
+                  duration: Duration(seconds: 5),
+                  content: Text('Image saved succesfully.'),
+                );
+                // ignore: use_build_context_synchronously
+                ScaffoldMessenger.of(context).showSnackBar(snackBar);
+              } else {
+                const snackBar = SnackBar(
+                  duration: Duration(seconds: 5),
+                  content: Text('There was a problem saving your image.'),
+                );
+                // ignore: use_build_context_synchronously
+                ScaffoldMessenger.of(context).showSnackBar(snackBar);
+              }
+
+              // ignore: use_build_context_synchronously
               Navigator.of(context, rootNavigator: true).pop();
             },
           ),
@@ -543,10 +571,12 @@ class ButtonWrap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double width = MediaQuery.of(context).size.width;
+    double edge20 = width * 0.01;
     return Expanded(
       child: SizedBox(
-        width: double.maxFinite,
-        child: Padding(padding: const EdgeInsets.all(15), child: child),
+        width: MediaQuery.of(context).size.width,
+        child: Padding(padding: EdgeInsets.all(edge20 * 0.75), child: child),
       ),
     );
   }
