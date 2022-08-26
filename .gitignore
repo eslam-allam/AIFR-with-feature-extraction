@@ -16,7 +16,6 @@ saved_models/
 *.txt
 *.log
 app-demo/client/flutter/demo_gui_flutter/android/
-app-demo/client/flutter/demo_gui_flutter/images
 app-demo/client/flutter/demo_gui_flutter/ios
 app-demo/client/flutter/demo_gui_flutter/linux
 app-demo/client/flutter/demo_gui_flutter/macos
