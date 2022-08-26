@@ -33,281 +33,270 @@ class _AddImagePageState extends State<AddImagePage> {
 
   @override
   build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add image to Dataset'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              debugPrint('settings pressed');
-            },
-            icon: const Icon(
-              Icons.settings,
+    return Container(
+      constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width,
+          maxHeight: MediaQuery.of(context).size.height),
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          fit: BoxFit.fill,
+          image: AssetImage(
+            '/home/eslamallam/Python/AIFR-with-feature-extraction/app-demo/client/flutter/demo_gui_flutter/images/add_image_background.jpg',
+          ),
+        ),
+      ),
+      width: MediaQuery.of(context).size.width,
+      alignment: Alignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Expanded(
+            flex: 4,
+            child: Column(
+              children: [
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20, top: 20),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: FractionallySizedBox(
+                            widthFactor: 0.6,
+                            child: TextNumberInput(
+                              controller: _nameController,
+                              label: 'Your Name:',
+                              text: true,
+                              maxlen: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 20, top: 20),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: FractionallySizedBox(
+                            widthFactor: 0.6,
+                            child: TextNumberInput(
+                              controller: _ageController,
+                              label: 'Age:',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 20, bottom: 40),
+                  child: Text(
+                    'Model Training preferences',
+                    textScaleFactor: 3,
+                    style: TextStyle(
+                      fontFamily: 'moon',
+                      color: Colors.deepPurpleAccent,
+                    ),
+                  ),
+                ),
+                FractionallySizedBox(
+                  widthFactor: 1,
+                  child: CustomCheckBoxGroup(
+                    buttonTextStyle: const ButtonTextStyle(
+                      selectedColor: Colors.red,
+                      unSelectedColor: Colors.orange,
+                      textStyle: TextStyle(
+                        fontSize: 16,
+                      ),
+                    ),
+                    unSelectedColor: Theme.of(context).canvasColor,
+                    defaultSelected: const [
+                      "Early stop",
+                      "Excel stats",
+                      "Variable KNN",
+                    ],
+                    buttonLables: const [
+                      "Loop",
+                      "Early stop",
+                      "Excel stats",
+                      "Variable KNN",
+                    ],
+                    buttonValuesList: const [
+                      "Loop",
+                      "Early stop",
+                      "Excel stats",
+                      "Variable KNN",
+                    ],
+                    checkBoxButtonValues: (values) {
+                      setState(() {
+                        if (values.contains('Loop')) {
+                          _loop = true;
+                        } else {
+                          _loop = false;
+                        }
+                        if (values.contains('Early stop')) {
+                          _earlyStop = true;
+                        } else {
+                          _earlyStop = false;
+                        }
+                        if (values.contains('Excel stats')) {
+                          _excelStats = true;
+                        } else {
+                          _excelStats = false;
+                        }
+                        if (values.contains('Variable KNN')) {
+                          _variableKNN = true;
+                        } else {
+                          _variableKNN = false;
+                        }
+                      });
+                    },
+                    spacing: 0,
+                    width: 150,
+                    horizontal: false,
+                    enableButtonWrap: true,
+                    absoluteZeroSpacing: false,
+                    selectedColor: Colors.purple.shade200,
+                    padding: 10,
+                    enableShape: true,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            const Text('Accuracy Threshold'),
+                            Slider(
+                              label: _accuracyThreshold.toStringAsFixed(2),
+                              value: _accuracyThreshold,
+                              min: 0.0,
+                              max: 100.0,
+                              divisions: 1000,
+                              onChanged: (value) {
+                                setState(
+                                  () {
+                                    _accuracyThreshold =
+                                        double.parse(value.toStringAsFixed(2));
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            const Text('Initial Dropout'),
+                            Slider(
+                              label: _initialDropout.toStringAsFixed(2),
+                              value: _initialDropout,
+                              min: 0.0,
+                              max: 0.6,
+                              divisions: 6,
+                              onChanged: (value) {
+                                setState(
+                                  () {
+                                    _initialDropout =
+                                        double.parse(value.toStringAsFixed(2));
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            const Text('KNN Neighbors'),
+                            Slider(
+                              label: _knnNeighbors.toStringAsFixed(2),
+                              value: _knnNeighbors,
+                              min: 1,
+                              max: 10,
+                              divisions: 9,
+                              onChanged: (value) {
+                                setState(
+                                  () {
+                                    _knnNeighbors =
+                                        double.parse(value.toStringAsFixed(2));
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            const Text('Variable Dropout'),
+                            Slider(
+                              label: _variableDropout.toStringAsFixed(2),
+                              value: _variableDropout,
+                              min: 0.0,
+                              max: 0.6,
+                              divisions: 60,
+                              onChanged: (value) {
+                                setState(
+                                  () {
+                                    _variableDropout =
+                                        double.parse(value.toStringAsFixed(2));
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TwoButtonRow(
+                    _knnNeighbors,
+                    _variableDropout,
+                    _accuracyThreshold,
+                    _initialDropout,
+                    _loop,
+                    _earlyStop,
+                    _excelStats,
+                    _variableKNN)
+              ],
             ),
+          ),
+          Expanded(
+            flex: 6,
+            child:
+                CameraBoxWithButtons(_formKey, _nameController, _ageController),
           ),
         ],
-      ),
-      body: Container(
-        constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width,
-            maxHeight: MediaQuery.of(context).size.height),
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            fit: BoxFit.fill,
-            image: AssetImage(
-              '/home/eslamallam/Python/AIFR-with-feature-extraction/app-demo/client/flutter/demo_gui_flutter/images/add_image_background.jpg',
-            ),
-          ),
-        ),
-        width: MediaQuery.of(context).size.width,
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Expanded(
-              flex: 4,
-              child: Column(
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 20, bottom: 40),
-                    child: Text(
-                      'Model Training preferences',
-                      textScaleFactor: 3,
-                      style: TextStyle(
-                        fontFamily: 'moon',
-                        color: Colors.deepPurpleAccent,
-                      ),
-                    ),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: 1,
-                    child: CustomCheckBoxGroup(
-                      buttonTextStyle: const ButtonTextStyle(
-                        selectedColor: Colors.red,
-                        unSelectedColor: Colors.orange,
-                        textStyle: TextStyle(
-                          fontSize: 16,
-                        ),
-                      ),
-                      unSelectedColor: Theme.of(context).canvasColor,
-                      defaultSelected: const [
-                        "Early stop",
-                        "Excel stats",
-                        "Variable KNN",
-                      ],
-                      buttonLables: const [
-                        "Loop",
-                        "Early stop",
-                        "Excel stats",
-                        "Variable KNN",
-                      ],
-                      buttonValuesList: const [
-                        "Loop",
-                        "Early stop",
-                        "Excel stats",
-                        "Variable KNN",
-                      ],
-                      checkBoxButtonValues: (values) {
-                        setState(() {
-                          if (values.contains('Loop')) {
-                            _loop = true;
-                          } else {
-                            _loop = false;
-                          }
-                          if (values.contains('Early stop')) {
-                            _earlyStop = true;
-                          } else {
-                            _earlyStop = false;
-                          }
-                          if (values.contains('Excel stats')) {
-                            _excelStats = true;
-                          } else {
-                            _excelStats = false;
-                          }
-                          if (values.contains('Variable KNN')) {
-                            _variableKNN = true;
-                          } else {
-                            _variableKNN = false;
-                          }
-                        });
-                      },
-                      spacing: 0,
-                      width: 150,
-                      horizontal: false,
-                      enableButtonWrap: true,
-                      absoluteZeroSpacing: false,
-                      selectedColor: Colors.white,
-                      padding: 10,
-                      enableShape: true,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 40),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            children: [
-                              const Text('Accuracy Threshold'),
-                              Slider(
-                                label: _accuracyThreshold.toStringAsFixed(2),
-                                value: _accuracyThreshold,
-                                min: 0.0,
-                                max: 100.0,
-                                divisions: 1000,
-                                onChanged: (value) {
-                                  setState(
-                                    () {
-                                      _accuracyThreshold = double.parse(
-                                          value.toStringAsFixed(2));
-                                    },
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              const Text('Initial Dropout'),
-                              Slider(
-                                label: _initialDropout.toStringAsFixed(2),
-                                value: _initialDropout,
-                                min: 0.0,
-                                max: 0.6,
-                                divisions: 6,
-                                onChanged: (value) {
-                                  setState(
-                                    () {
-                                      _initialDropout = double.parse(
-                                          value.toStringAsFixed(2));
-                                    },
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 40),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            children: [
-                              const Text('KNN Neighbors'),
-                              Slider(
-                                label: _knnNeighbors.toStringAsFixed(2),
-                                value: _knnNeighbors,
-                                min: 1,
-                                max: 10,
-                                divisions: 9,
-                                onChanged: (value) {
-                                  setState(
-                                    () {
-                                      _knnNeighbors = double.parse(
-                                          value.toStringAsFixed(2));
-                                    },
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              const Text('Variable Dropout'),
-                              Slider(
-                                label: _variableDropout.toStringAsFixed(2),
-                                value: _variableDropout,
-                                min: 0.0,
-                                max: 0.6,
-                                divisions: 60,
-                                onChanged: (value) {
-                                  setState(
-                                    () {
-                                      _variableDropout = double.parse(
-                                          value.toStringAsFixed(2));
-                                    },
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20, top: 20),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: FractionallySizedBox(
-                              widthFactor: 0.6,
-                              child: TextNumberInput(
-                                controller: _nameController,
-                                label: 'Your Name:',
-                                text: true,
-                                maxlen: 15,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20, top: 20),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: FractionallySizedBox(
-                              widthFactor: 0.6,
-                              child: TextNumberInput(
-                                controller: _ageController,
-                                label: 'Age:',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TwoButtonRow(
-                      _formKey,
-                      _nameController,
-                      _ageController,
-                      _knnNeighbors,
-                      _variableDropout,
-                      _accuracyThreshold,
-                      _initialDropout,
-                      _loop,
-                      _earlyStop,
-                      _excelStats,
-                      _variableKNN)
-                ],
-              ),
-            ),
-            const Expanded(
-              flex: 6,
-              child: CameraBoxWithButtons(),
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
 class CameraBoxWithButtons extends StatelessWidget {
-  const CameraBoxWithButtons({
+  const CameraBoxWithButtons(
+    this.formKey,
+    this.nameController,
+    this.ageController, {
     Key? key,
   }) : super(key: key);
+
+  final TextEditingController nameController, ageController;
+  final GlobalKey<FormState> formKey;
 
   @override
   Widget build(BuildContext context) {
@@ -320,14 +309,26 @@ class CameraBoxWithButtons extends StatelessWidget {
         child: Stack(
           alignment: Alignment.topLeft,
           children: [
-            const Padding(
-              padding: EdgeInsets.all(30),
-              child: CameraFeed(),
+            Padding(
+              padding: const EdgeInsets.all(30),
+              child: CameraFeed(formKey, nameController, ageController),
             ),
             Padding(
               padding: const EdgeInsets.only(top: 40.0, left: 40.0),
               child: IconButton(
-                onPressed: () => captureAlert(context, null),
+                onPressed: () {
+                  if (!formKey.currentState!.validate()) {
+                    // If the form is valid, display a snackbar. In the real world,
+                    // you'd often call a server or save the information in a database.
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Please fill the required fields')),
+                    );
+                  } else {
+                    captureAlert(
+                        context, null, nameController.text, ageController.text);
+                  }
+                },
                 icon: const Icon(
                   Icons.camera_alt,
                   color: Colors.black,
@@ -344,9 +345,6 @@ class CameraBoxWithButtons extends StatelessWidget {
 
 class TwoButtonRow extends StatelessWidget {
   const TwoButtonRow(
-    this.formKey,
-    this.nameController,
-    this.ageController,
     this.knnNeighbors,
     this.variableDropout,
     this.accuracyThreshold,
@@ -360,10 +358,9 @@ class TwoButtonRow extends StatelessWidget {
   final double _buttonwidthfactor = 0.8;
   final double _buttonheightfactor = 0.8;
   final double _buttonborderradius = 50;
-  final TextEditingController? nameController, ageController;
+
   final double knnNeighbors, variableDropout, accuracyThreshold, initialDropout;
   final bool loop, earlyStop, excelStats, variableKNN;
-  final GlobalKey<FormState> formKey;
 
   @override
   Widget build(BuildContext context) {
@@ -389,17 +386,8 @@ class TwoButtonRow extends StatelessWidget {
                     ),
                   ),
                   onPressed: () {
-                    if (!formKey.currentState!.validate()) {
-                      // If the form is valid, display a snackbar. In the real world,
-                      // you'd often call a server or save the information in a database.
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Please fill the required fields')),
-                      );
-                    } else {
-                      debugPrint(
-                          'Name: ${nameController?.text}\nAge: ${ageController?.text}\nloop: $loop, Early Stop: $earlyStop\nExcel stats: $excelStats, Variable KNN: $variableKNN\n Accuracy Threshold: $accuracyThreshold, Initial Dropout: $initialDropout\nKNN neighbors: $knnNeighbors\nVariable Dropout: $variableDropout');
-                    }
+                    debugPrint(
+                        'loop: $loop, Early Stop: $earlyStop\nExcel stats: $excelStats, Variable KNN: $variableKNN\n Accuracy Threshold: $accuracyThreshold, Initial Dropout: $initialDropout\nKNN neighbors: $knnNeighbors\nVariable Dropout: $variableDropout');
                   },
                   child: const Text(
                     'Train Model',
@@ -445,19 +433,21 @@ class TwoButtonRow extends StatelessWidget {
 
 void captureAlert(
   BuildContext context,
-  image, {
+  image,
+  String name,
+  String age, {
   bool fromfile = false,
-  String name = 'unnamed.jpg',
 }) async {
   http.Response response;
   int code;
-  String url = 'http://localhost:5000/capture?save=False';
+  final String url =
+      'http://localhost:5000/capture?save=False&name=${name.toString()}&age=${age.toString()}';
   if (!fromfile) {
     response = await http.get(Uri.parse(url));
   } else {
     assert(image != null, 'Passed image is null');
 
-    response = await _asyncFileUpload(name, image, url);
+    response = await _asyncFileUpload(name, age, image, url);
   }
 
   code = response.statusCode;
@@ -468,6 +458,7 @@ void captureAlert(
       content: Text(
           'Face not detected! Please position your face at the middle of the screen and try again'),
     );
+    // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   } else {
     Alert(
@@ -518,7 +509,7 @@ void captureAlert(
             onPressed: () {
               http.get(
                 Uri.parse(
-                  'http://localhost:5000/capture?save=True',
+                  'http://localhost:5000/capture?save=True&name=$name&age=$age',
                 ),
               );
               Navigator.of(context, rootNavigator: true).pop();
@@ -545,7 +536,11 @@ class ButtonWrap extends StatelessWidget {
 }
 
 class CameraFeed extends StatefulWidget {
-  const CameraFeed({Key? key}) : super(key: key);
+  final TextEditingController nameController, ageController;
+  final GlobalKey<FormState> formKey;
+  const CameraFeed(this.formKey, this.nameController, this.ageController,
+      {Key? key})
+      : super(key: key);
 
   @override
   CameraFeedState createState() => CameraFeedState();
@@ -565,10 +560,8 @@ class CameraFeedState extends State<CameraFeed> {
       ..src = "http://localhost:5000/video";
 
     // ignore:undefined_prefixed_name
-    ui.platformViewRegistry.registerViewFactory(
-      'CameraView',
-      (int viewId) => _element,
-    );
+    ui.platformViewRegistry
+        .registerViewFactory('CameraView', (int viewId) => _element);
 
     super.initState();
   }
@@ -582,26 +575,38 @@ class CameraFeedState extends State<CameraFeed> {
             operation: DragOperation.copy,
             onCreated: (DropzoneViewController ctrl) => controller = ctrl,
             onDrop: (dynamic ev) async {
-              final image = await controller.getFileData(ev);
-              String name = await controller.getFilename(ev);
+              if (!widget.formKey.currentState!.validate()) {
+                // If the form is valid, display a snackbar. In the real world,
+                // you'd often call a server or save the information in a database.
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please fill the required fields')),
+                );
+              } else {
+                final image = await controller.getFileData(ev);
 
-              captureAlert(context, image, fromfile: true, name: name);
+                // ignore: use_build_context_synchronously
+                captureAlert(context, image, widget.nameController.text,
+                    widget.ageController.text,
+                    fromfile: true);
+              }
             }),
       ],
     );
   }
 }
 
-_asyncFileUpload(String name, Uint8List image, String url) async {
+Future _asyncFileUpload(
+    String name, String age, Uint8List image, String url) async {
   //create multipart request for POST or PATCH method
   var request = http.MultipartRequest("POST", Uri.parse(url));
   //add text fields
 
   //create multipart using filepath, string or bytes
   var pic = http.MultipartFile.fromBytes('files.myImage', image,
-      contentType: MediaType.parse('image/jpeg'), filename: name);
+      contentType: MediaType.parse('image/jpeg'), filename: 'image.jpg');
   //add multipart to request
-  request.fields['name'] = name;
+
   request.fields['directory'] = '';
   request.files.add(pic);
 

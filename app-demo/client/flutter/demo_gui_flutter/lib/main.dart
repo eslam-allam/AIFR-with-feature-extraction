@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:demo_gui_flutter/training_page.dart';
+import 'package:demo_gui_flutter/add_image_page.dart';
 import 'package:demo_gui_flutter/profile_page.dart';
 import 'package:flutter/material.dart';
 
@@ -31,7 +32,7 @@ class RootPage extends StatefulWidget {
 
 class _RootPageState extends State<RootPage> {
   int currentPage = 0;
-  List<Widget> pages = const [TrainingPage(), TestingPage()];
+  List<Widget> pages = const [AddImagePage(), TestingPage()];
   @override
   Widget build(BuildContext context) {
     return Scaffold(

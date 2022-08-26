@@ -1,4 +1,6 @@
 import base64
+import os
+import re
 from flask import Flask, Response, render_template, request
 import cv2
 import sys
@@ -67,6 +69,9 @@ def capture():
     args = request.args
     save = args.get('save')
     get_result = args.get('getresult') 
+    name = args.get('name').lower()
+    age = args.get('age')
+    
    
     if get_result == 'True':
         return Response(cv2.imencode('.jpg', current_pic)[1].tobytes(),status=200, headers=HEADERS)
@@ -80,11 +85,9 @@ def capture():
         else:
             
             image = request.files.get('files.myImage')
-            name = image.filename
+            
 
-            if request.form['directory']: new_image_directory = request.form['directory']
-            if request.form['name']: new_image_directory = request.form['name']
-            else: name = image.filename
+            
             
             
             image = np.fromfile(image)
@@ -98,9 +101,19 @@ def capture():
             print('face not found')
             return Response(status=403, headers=HEADERS)
         image = cv2.imencode('.jpg', image)[1].tobytes()
+        
 
         return Response(image,status=200, headers=HEADERS)
     else:
+        
+        last_image_name = sorted(os.listdir(NEW_IMAGE_DIRECTORY))[-1]
+        last_image_name = last_image_name.split('.')[0].split('A')[0].split('-')
+        last_id, last_name = int(last_image_name[0]), last_image_name[1].lower()
+        
+        if last_name != name: last_id = last_id + 1
+        
+        name = f'{str(last_id).zfill(3)}-{name}A{age}.jpg'
+        
         if new_image_directory: cv2.imwrite(f'{new_image_directory}/{name}', current_pic)
         else:
             cv2.imwrite(f'{NEW_IMAGE_DIRECTORY}/{name}', current_pic)
