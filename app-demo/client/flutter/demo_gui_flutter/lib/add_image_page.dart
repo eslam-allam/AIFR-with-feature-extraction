@@ -104,7 +104,7 @@ class _AddImagePageState extends State<AddImagePage> {
                   widthFactor: 1,
                   child: CustomCheckBoxGroup(
                     buttonTextStyle: const ButtonTextStyle(
-                      selectedColor: Colors.red,
+                      selectedColor: Colors.orange,
                       unSelectedColor: Colors.orange,
                       textStyle: TextStyle(
                         fontSize: 16,
@@ -157,7 +157,7 @@ class _AddImagePageState extends State<AddImagePage> {
                     horizontal: false,
                     enableButtonWrap: true,
                     absoluteZeroSpacing: false,
-                    selectedColor: Colors.purple.shade200,
+                    selectedColor: Colors.white38,
                     padding: 10,
                     enableShape: true,
                   ),
@@ -171,6 +171,8 @@ class _AddImagePageState extends State<AddImagePage> {
                           children: [
                             const Text('Accuracy Threshold'),
                             Slider(
+                              inactiveColor: Colors.orange.shade100,
+                              activeColor: Colors.orange,
                               label: _accuracyThreshold.toStringAsFixed(2),
                               value: _accuracyThreshold,
                               min: 0.0,
@@ -193,6 +195,8 @@ class _AddImagePageState extends State<AddImagePage> {
                           children: [
                             const Text('Initial Dropout'),
                             Slider(
+                              inactiveColor: Colors.orange.shade100,
+                              activeColor: Colors.orange,
                               label: _initialDropout.toStringAsFixed(2),
                               value: _initialDropout,
                               min: 0.0,
@@ -222,6 +226,8 @@ class _AddImagePageState extends State<AddImagePage> {
                           children: [
                             const Text('KNN Neighbors'),
                             Slider(
+                              inactiveColor: Colors.orange.shade100,
+                              activeColor: Colors.orange,
                               label: _knnNeighbors.toStringAsFixed(2),
                               value: _knnNeighbors,
                               min: 1,
@@ -244,6 +250,8 @@ class _AddImagePageState extends State<AddImagePage> {
                           children: [
                             const Text('Variable Dropout'),
                             Slider(
+                              activeColor: Colors.orange,
+                              inactiveColor: Colors.orange.shade100,
                               label: _variableDropout.toStringAsFixed(2),
                               value: _variableDropout,
                               min: 0.0,
@@ -367,7 +375,7 @@ class TwoButtonRow extends StatelessWidget {
     return Expanded(
       flex: 1,
       child: FractionallySizedBox(
-        heightFactor: 0.2,
+        heightFactor: 0.4,
         child: Row(
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -460,6 +468,15 @@ void captureAlert(
     );
     // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    return;
+  } else if (code == 500) {
+    const snackBar = SnackBar(
+      duration: Duration(seconds: 5),
+      content: Text('A server side error has occured. Please try again later.'),
+    );
+    // ignore: use_build_context_synchronously
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    return;
   } else {
     Alert(
         style: const AlertStyle(
@@ -557,6 +574,9 @@ class CameraFeedState extends State<CameraFeed> {
       ..style.width = '100%'
       ..style.border = '0'
       ..style.cursor = 'None'
+      ..setAttribute('alt', 'Image not found. API must have crashed.')
+      ..setAttribute('onerror',
+          "this.onerror=null;this.src='images/facial-recognition-connected-real-estate.png';")
       ..src = "http://localhost:5000/video";
 
     // ignore:undefined_prefixed_name
@@ -616,7 +636,7 @@ Future _asyncFileUpload(
     http.Response response = await http.get(Uri.parse('$url&getresult=True'));
     return response;
   } else {
-    return http.Response('', 403);
+    return http.Response('', responsestream.statusCode);
   }
 }
 

@@ -77,48 +77,50 @@ def capture():
         return Response(cv2.imencode('.jpg', current_pic)[1].tobytes(),status=200, headers=HEADERS)
 
 
-    
-    if save == 'False':
-        if request.method == 'GET':
-            image=frames.pop()
-            name = False
+    try:
+        if save == 'False':
+            if request.method == 'GET':
+                image=frames.pop()
+                name = False
+            else:
+                
+                image = request.files.get('files.myImage')
+                
+
+                
+                
+                
+                image = np.fromfile(image)
+                image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+                
+
+            image = proccess_image(image)
+            current_pic = image
+
+            if image is None: 
+                print('face not found')
+                return Response(status=403, headers=HEADERS)
+            image = cv2.imencode('.jpg', image)[1].tobytes()
+            
+
+            return Response(image,status=200, headers=HEADERS)
         else:
             
-            image = request.files.get('files.myImage')
+            last_image_name = sorted(os.listdir(NEW_IMAGE_DIRECTORY))[-1]
+            last_image_name = last_image_name.split('.')[0].split('A')[0].split('-')
+            last_id, last_name = int(last_image_name[0]), last_image_name[1].lower()
             
-
+            if last_name != name: last_id = last_id + 1
             
+            name = f'{str(last_id).zfill(3)}-{name}A{age}.jpg'
             
+            if new_image_directory: cv2.imwrite(f'{new_image_directory}/{name}', current_pic)
+            else:
+                cv2.imwrite(f'{NEW_IMAGE_DIRECTORY}/{name}', current_pic)
             
-            image = np.fromfile(image)
-            image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-            
-
-        image = proccess_image(image)
-        current_pic = image
-
-        if image is None: 
-            print('face not found')
-            return Response(status=403, headers=HEADERS)
-        image = cv2.imencode('.jpg', image)[1].tobytes()
-        
-
-        return Response(image,status=200, headers=HEADERS)
-    else:
-        
-        last_image_name = sorted(os.listdir(NEW_IMAGE_DIRECTORY))[-1]
-        last_image_name = last_image_name.split('.')[0].split('A')[0].split('-')
-        last_id, last_name = int(last_image_name[0]), last_image_name[1].lower()
-        
-        if last_name != name: last_id = last_id + 1
-        
-        name = f'{str(last_id).zfill(3)}-{name}A{age}.jpg'
-        
-        if new_image_directory: cv2.imwrite(f'{new_image_directory}/{name}', current_pic)
-        else:
-            cv2.imwrite(f'{NEW_IMAGE_DIRECTORY}/{name}', current_pic)
-        
-        return Response(status=200, headers=HEADERS)
+            return Response(status=200, headers=HEADERS)
+    except:
+        return Response(status=500, headers=HEADERS)
     
 @app.route('/processdirectory', methods=['GET'])
 def processdirectory():
