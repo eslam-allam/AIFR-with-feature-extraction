@@ -124,10 +124,12 @@ def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
         label[1] = re.sub(r'[aA-zZ]+', '', label[1])
         label = label[0].split('-') + [label[1]]
         if len(label) == 3:
-             label, name , age = label[0],int(label[1]) -1 , label[1]
-             print (name)
+             label, name , age = int(label[0]) - 1,label[1] , label[2]
+             
         else: label, age = int(label[0]) -1 , label[1]
-        ages[i] = re.sub(r'[aA-zZ]+', '', age )
+
+       
+        ages[i] = int(re.sub(r'[aA-zZ]+', '', age ))
         labels[i] = label
     
     num_classes = len(np.unique(labels))
@@ -333,8 +335,8 @@ def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directo
 def save_model(model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accuracy,save_directory=MODEL_SAVE_DIRECTORY, model_name=None, save_excel_stats=False, y_test_ages=None, predicted=None, history=None, y_test=None):
 
     if not model_name: 
-        saved_models = os.listdir(save_directory)
-        model_name = f'model{len(saved_models)+1}_accuracy_{accuracy*100:.2f}'
+        last_model_num = int(sorted(os.listdir(save_directory))[-1].split('_')[0][5])+1
+        model_name = f'model{last_model_num}_accuracy_{accuracy*100:.2f}'
 
     model_location = save_directory+model_name
     os.makedirs(model_location,exist_ok=False)
@@ -398,6 +400,20 @@ def  notify_telegram(model_name=None, accuracy=None, telegram_bot_token=None, te
         mylogs.warning('MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID')
 
 def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD, model_summary=False, drop_out=DROPOUT, variable_dropout=None, variable_knn=False):
+    mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
+                                LOOP = {loop}, EARLY_STOP = {early_stop}, SAVE_EXCEL_STATS = {save_excel_stats}, MODEL_SUMMARY = {model_summary}
+                                NUMBER_OF_KNN_NEIGHBOURS = {KNN_neighbors}
+                                ACCURACY_THRESHOLD = {accuracy_threshold}
+                                DROPOUT = {drop_out}
+                                VARIABLE_DROPOUT = {variable_dropout}
+                                KNN_NEIGHBORS = {KNN_neighbors}
+                                VARIABLE_KNN_NEIGHBORS = {variable_knn}
+                                SAVE_DIRECTORY = {save_directory}
+                                SYSTEM_SHUTDOWN = {args.shutdown}
+    ------------------------------------------------------------------------------------------------------------------------------------------------''')
+    
+    
+    
     x_train, y_train, x_test, y_test, y_train_categorical, y_test_ages, num_classes = load_dataset()
 
     while True:
@@ -418,6 +434,8 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
 
             DCA_accuracy = metrics.accuracy_score(y_test, predicted)
 
+            if accuracy_threshold == 0.0:
+                return model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory
             if DCA_accuracy >= accuracy_threshold:
                 model_name = save_model(model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy,
                 save_excel_stats=save_excel_stats, y_test_ages=y_test_ages, predicted=predicted, history=history, y_test=y_test, save_directory=save_directory)
@@ -441,47 +459,37 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
     return model_name, DCA_accuracy
 
 
+if __name__ == '__main__':        
+    loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary, variable_dropout, drop_out, variable_knn = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD, False, None, DROPOUT, False
+    if args.early_stop:
+        early_stop = True
+    if args.no_excel:
+        save_excel_stats = False
+    if args.knn_neighbors:
+        KNN_neighbors = args.knn_neighbors
+    if args.save_directory:
+        save_directory = args.save_directory
+    if args.model_summary:
+        model_summary = True
+    if args.loop:
+        loop = True
+    if args.variable_dropout:
+        variable_dropout = args.variable_dropout
+    if args.variable_knn:
+        variable_knn = True
+    if args.dropout:
+        drop_out = args.dropout
+    if args.accuracy_threshold:
+        accuracy_threshold = args.accuracy_threshold
         
-loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary, variable_dropout, drop_out, variable_knn = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD, False, None, DROPOUT, False
-if args.early_stop:
-    early_stop = True
-if args.no_excel:
-    save_excel_stats = False
-if args.knn_neighbors:
-    KNN_neighbors = args.knn_neighbors
-if args.save_directory:
-    save_directory = args.save_directory
-if args.model_summary:
-    model_summary = True
-if args.loop:
-    loop = True
-if args.variable_dropout:
-    variable_dropout = args.variable_dropout
-if args.variable_knn:
-    variable_knn = True
-if args.dropout:
-    drop_out = args.dropout
-if args.accuracy_threshold:
-    accuracy_threshold = args.accuracy_threshold
     
-mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
-                             LOOP = {loop}, EARLY_STOP = {early_stop}, SAVE_EXCEL_STATS = {save_excel_stats}, MODEL_SUMMARY = {model_summary}
-                             NUMBER_OF_KNN_NEIGHBOURS = {KNN_neighbors}
-                             ACCURACY_THRESHOLD = {accuracy_threshold}
-                             DROPOUT = {drop_out}
-                             VARIABLE_DROPOUT = {variable_dropout}
-                             KNN_NEIGHBORS = {KNN_neighbors}
-                             VARIABLE_KNN_NEIGHBORS = {variable_knn}
-                             SAVE_DIRECTORY = {save_directory}
-                             SYSTEM_SHUTDOWN = {args.shutdown}
-------------------------------------------------------------------------------------------------------------------------------------------------''')
 
-if args.notify_telegram: 
-    mylogs.info('TELEGRAM NOTIFICATION ENABLED BY USER. STARTING CONFIG.')
-    telegram_bot_token, telegram_chatID = notify_telegram(init=True)
+    if args.notify_telegram: 
+        mylogs.info('TELEGRAM NOTIFICATION ENABLED BY USER. STARTING CONFIG.')
+        telegram_bot_token, telegram_chatID = notify_telegram(init=True)
 
-model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary=model_summary, variable_dropout=variable_dropout, drop_out=drop_out, variable_knn=variable_knn)
+    model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary=model_summary, variable_dropout=variable_dropout, drop_out=drop_out, variable_knn=variable_knn)
 
-if args.notify_telegram: notify_telegram(model_name, accuracy, telegram_bot_token=telegram_bot_token, telegram_chatID=telegram_chatID)
-if args.shutdown:
-    subprocess.call(['systemctl', 'poweroff'])
+    if args.notify_telegram: notify_telegram(model_name, accuracy, telegram_bot_token=telegram_bot_token, telegram_chatID=telegram_chatID)
+    if args.shutdown:
+        subprocess.call(['systemctl', 'poweroff'])

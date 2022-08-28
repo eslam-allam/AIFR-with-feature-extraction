@@ -159,28 +159,30 @@ def main(single_image=False, dataset_directory=DATASET_DIRECTORY, processed_imag
                 
             cv2.imwrite(new_path, image)
 
-args = sys.argv
+if __name__ == '__main__':
 
-assert not('--one-image' in args and '--from-directory' in args), 'Cannot use one-image and from-directory modes at the same time'
+    args = sys.argv
 
-if '--cli' in args:
-    assert '--one-image' in args or '--from-directory' in args, 'CLI mode must be used with either --one-image or --from-directory.'
-    
-    src_directory = input(f'Enter source image directory excluding filename(If empty {DATASET_DIRECTORY} will be used): ')
-    if not src_directory: src_directory = DATASET_DIRECTORY
+    assert not('--one-image' in args and '--from-directory' in args), 'Cannot use one-image and from-directory modes at the same time'
 
-    out_directory = input(f'Enter output directory excluding file name (if empty {PROCESSED_IMAGE_DIRECTORY} will be used): ')
-    if not out_directory: out_directory = PROCESSED_IMAGE_DIRECTORY
-
-    if '--one-image' in args:
-        name = input('Enter image name (This field is mandatory): ')
-        assert name, 'You must provide a name for the image'
-        main(single_image=True, dataset_directory=src_directory, processed_image_directory=out_directory, image_name=name)
-
-    elif '--from-directory' in args:
-        main(dataset_directory=src_directory, processed_image_directory=out_directory)
-
+    if '--cli' in args:
+        assert '--one-image' in args or '--from-directory' in args, 'CLI mode must be used with either --one-image or --from-directory.'
         
+        src_directory = input(f'Enter source image directory excluding filename(If empty {DATASET_DIRECTORY} will be used): ')
+        if not src_directory: src_directory = DATASET_DIRECTORY
 
-        
+        out_directory = input(f'Enter output directory excluding file name (if empty {PROCESSED_IMAGE_DIRECTORY} will be used): ')
+        if not out_directory: out_directory = PROCESSED_IMAGE_DIRECTORY
+
+        if '--one-image' in args:
+            name = input('Enter image name (This field is mandatory): ')
+            assert name, 'You must provide a name for the image'
+            main(single_image=True, dataset_directory=src_directory, processed_image_directory=out_directory, image_name=name)
+
+        elif '--from-directory' in args:
+            main(dataset_directory=src_directory, processed_image_directory=out_directory)
+
+            
+
+            
 

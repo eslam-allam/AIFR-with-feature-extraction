@@ -19,10 +19,10 @@ class AddImagePage extends StatefulWidget {
 }
 
 class _AddImagePageState extends State<AddImagePage> {
-  double _accuracyThreshold = 89;
+  double _accuracyThreshold = 0;
   double _variableDropout = 0.01;
-  double _knnNeighbors = 5;
-  double _initialDropout = 0.2;
+  double _knnNeighbors = 3;
+  double _initialDropout = 0.32;
   bool _loop = false,
       _earlyStop = true,
       _excelStats = true,
@@ -54,241 +54,245 @@ class _AddImagePageState extends State<AddImagePage> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Expanded(
-            flex: 4,
-            child: Column(
-              children: [
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.only(left: edge20, top: edge20),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: FractionallySizedBox(
-                            widthFactor: 0.6,
-                            child: TextNumberInput(
-                              controller: _nameController,
-                              label: 'Your Name:',
-                              text: true,
-                              maxlen: 15,
+            flex: 7,
+            child: FractionallySizedBox(
+              widthFactor: 0.9,
+              child: Column(
+                children: [
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(left: edge20, top: edge20),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FractionallySizedBox(
+                              widthFactor: 0.6,
+                              child: TextNumberInput(
+                                controller: _nameController,
+                                label: 'Your Name:',
+                                text: true,
+                                maxlen: 15,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.only(left: edge20, top: edge20),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: FractionallySizedBox(
-                            widthFactor: 0.6,
-                            child: TextNumberInput(
-                              controller: _ageController,
-                              label: 'Age:',
+                        Padding(
+                          padding: EdgeInsets.only(left: edge20, top: edge20),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FractionallySizedBox(
+                              widthFactor: 0.6,
+                              child: TextNumberInput(
+                                controller: _ageController,
+                                label: 'Age:',
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(top: edge20, bottom: edge20 * 3),
-                  child: Text(
-                    'Model Training preferences',
-                    textScaleFactor: edge20 * 0.15,
-                    style: const TextStyle(
-                      fontFamily: 'moon',
-                      color: Colors.deepPurpleAccent,
+                      ],
                     ),
                   ),
-                ),
-                FractionallySizedBox(
-                  widthFactor: 1,
-                  child: CustomCheckBoxGroup(
-                    buttonTextStyle: ButtonTextStyle(
-                      selectedColor: Colors.orange,
-                      unSelectedColor: Colors.orange,
-                      textStyle: TextStyle(
-                        fontSize: edge20 * 0.8,
+                  Padding(
+                    padding:
+                        EdgeInsets.only(top: edge20 * 2, bottom: edge20 * 3),
+                    child: Text(
+                      'Model Training preferences',
+                      textScaleFactor: edge20 * 0.15,
+                      style: const TextStyle(
+                        fontFamily: 'moon',
+                        color: Colors.deepPurpleAccent,
                       ),
                     ),
-                    unSelectedColor: Theme.of(context).canvasColor,
-                    defaultSelected: const [
-                      "Early stop",
-                      "Excel stats",
-                      "Variable KNN",
-                    ],
-                    buttonLables: const [
-                      "Loop",
-                      "Early stop",
-                      "Excel stats",
-                      "Variable KNN",
-                    ],
-                    buttonValuesList: const [
-                      "Loop",
-                      "Early stop",
-                      "Excel stats",
-                      "Variable KNN",
-                    ],
-                    checkBoxButtonValues: (values) {
-                      setState(() {
-                        if (values.contains('Loop')) {
-                          _loop = true;
-                        } else {
-                          _loop = false;
-                        }
-                        if (values.contains('Early stop')) {
-                          _earlyStop = true;
-                        } else {
-                          _earlyStop = false;
-                        }
-                        if (values.contains('Excel stats')) {
-                          _excelStats = true;
-                        } else {
-                          _excelStats = false;
-                        }
-                        if (values.contains('Variable KNN')) {
-                          _variableKNN = true;
-                        } else {
-                          _variableKNN = false;
-                        }
-                      });
-                    },
-                    spacing: 0,
-                    width: edge20 * 7.5,
-                    horizontal: false,
-                    enableButtonWrap: true,
-                    absoluteZeroSpacing: false,
-                    selectedColor: Colors.white38,
-                    padding: edge20 * 0.5,
-                    enableShape: true,
                   ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(top: edge20 * 3),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            const Text('Accuracy Threshold'),
-                            Slider(
-                              inactiveColor: Colors.orange.shade100,
-                              activeColor: Colors.orange,
-                              label: _accuracyThreshold.toStringAsFixed(2),
-                              value: _accuracyThreshold,
-                              min: 0.0,
-                              max: 100.0,
-                              divisions: 1000,
-                              onChanged: (value) {
-                                setState(
-                                  () {
-                                    _accuracyThreshold =
-                                        double.parse(value.toStringAsFixed(2));
-                                  },
-                                );
-                              },
-                            ),
-                          ],
+                  FractionallySizedBox(
+                    widthFactor: 1,
+                    child: CustomCheckBoxGroup(
+                      buttonTextStyle: ButtonTextStyle(
+                        selectedColor: Colors.orange,
+                        unSelectedColor: Colors.orange,
+                        textStyle: TextStyle(
+                          fontSize: edge20 * 0.8,
                         ),
                       ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            const Text('Initial Dropout'),
-                            Slider(
-                              inactiveColor: Colors.orange.shade100,
-                              activeColor: Colors.orange,
-                              label: _initialDropout.toStringAsFixed(2),
-                              value: _initialDropout,
-                              min: 0.0,
-                              max: 0.6,
-                              divisions: 6,
-                              onChanged: (value) {
-                                setState(
-                                  () {
-                                    _initialDropout =
-                                        double.parse(value.toStringAsFixed(2));
-                                  },
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      unSelectedColor: Theme.of(context).canvasColor,
+                      defaultSelected: const [
+                        "Early stop",
+                        "Excel stats",
+                        "Variable KNN",
+                      ],
+                      buttonLables: const [
+                        "Loop",
+                        "Early stop",
+                        "Excel stats",
+                        "Variable KNN",
+                      ],
+                      buttonValuesList: const [
+                        "Loop",
+                        "Early stop",
+                        "Excel stats",
+                        "Variable KNN",
+                      ],
+                      checkBoxButtonValues: (values) {
+                        setState(() {
+                          if (values.contains('Loop')) {
+                            _loop = true;
+                          } else {
+                            _loop = false;
+                          }
+                          if (values.contains('Early stop')) {
+                            _earlyStop = true;
+                          } else {
+                            _earlyStop = false;
+                          }
+                          if (values.contains('Excel stats')) {
+                            _excelStats = true;
+                          } else {
+                            _excelStats = false;
+                          }
+                          if (values.contains('Variable KNN')) {
+                            _variableKNN = true;
+                          } else {
+                            _variableKNN = false;
+                          }
+                        });
+                      },
+                      spacing: 0,
+                      width: edge20 * 7.5,
+                      horizontal: false,
+                      enableButtonWrap: true,
+                      absoluteZeroSpacing: false,
+                      selectedColor: Colors.white38,
+                      padding: edge20 * 0.5,
+                      enableShape: true,
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(top: edge20 * 3),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            const Text('KNN Neighbors'),
-                            Slider(
-                              inactiveColor: Colors.orange.shade100,
-                              activeColor: Colors.orange,
-                              label: _knnNeighbors.toStringAsFixed(2),
-                              value: _knnNeighbors,
-                              min: 1,
-                              max: 10,
-                              divisions: 9,
-                              onChanged: (value) {
-                                setState(
-                                  () {
-                                    _knnNeighbors =
-                                        double.parse(value.toStringAsFixed(2));
-                                  },
-                                );
-                              },
-                            ),
-                          ],
+                  Padding(
+                    padding: EdgeInsets.only(top: edge20 * 3),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Accuracy Threshold'),
+                              Slider(
+                                inactiveColor: Colors.orange.shade100,
+                                activeColor: Colors.orange,
+                                label: _accuracyThreshold.toStringAsFixed(2),
+                                value: _accuracyThreshold,
+                                min: 0.0,
+                                max: 100.0,
+                                divisions: 1000,
+                                onChanged: (value) {
+                                  setState(
+                                    () {
+                                      _accuracyThreshold = double.parse(
+                                          value.toStringAsFixed(2));
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            const Text('Variable Dropout'),
-                            Slider(
-                              activeColor: Colors.orange,
-                              inactiveColor: Colors.orange.shade100,
-                              label: _variableDropout.toStringAsFixed(2),
-                              value: _variableDropout,
-                              min: 0.0,
-                              max: 0.6,
-                              divisions: 60,
-                              onChanged: (value) {
-                                setState(
-                                  () {
-                                    _variableDropout =
-                                        double.parse(value.toStringAsFixed(2));
-                                  },
-                                );
-                              },
-                            ),
-                          ],
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Initial Dropout'),
+                              Slider(
+                                inactiveColor: Colors.orange.shade100,
+                                activeColor: Colors.orange,
+                                label: _initialDropout.toStringAsFixed(2),
+                                value: _initialDropout,
+                                min: 0.0,
+                                max: 0.6,
+                                divisions: 6,
+                                onChanged: (value) {
+                                  setState(
+                                    () {
+                                      _initialDropout = double.parse(
+                                          value.toStringAsFixed(2));
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                TwoButtonRow(
-                    _knnNeighbors,
-                    _variableDropout,
-                    _accuracyThreshold,
-                    _initialDropout,
-                    _loop,
-                    _earlyStop,
-                    _excelStats,
-                    _variableKNN)
-              ],
+                  Padding(
+                    padding: EdgeInsets.only(top: edge20 * 3),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('KNN Neighbors'),
+                              Slider(
+                                inactiveColor: Colors.orange.shade100,
+                                activeColor: Colors.orange,
+                                label: _knnNeighbors.toStringAsFixed(2),
+                                value: _knnNeighbors,
+                                min: 1,
+                                max: 10,
+                                divisions: 9,
+                                onChanged: (value) {
+                                  setState(
+                                    () {
+                                      _knnNeighbors = double.parse(
+                                          value.toStringAsFixed(2));
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Variable Dropout'),
+                              Slider(
+                                activeColor: Colors.orange,
+                                inactiveColor: Colors.orange.shade100,
+                                label: _variableDropout.toStringAsFixed(2),
+                                value: _variableDropout,
+                                min: 0.0,
+                                max: 0.6,
+                                divisions: 60,
+                                onChanged: (value) {
+                                  setState(
+                                    () {
+                                      _variableDropout = double.parse(
+                                          value.toStringAsFixed(2));
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TwoButtonRow(
+                      _knnNeighbors,
+                      _variableDropout,
+                      _accuracyThreshold,
+                      _initialDropout,
+                      _loop,
+                      _earlyStop,
+                      _excelStats,
+                      _variableKNN)
+                ],
+              ),
             ),
           ),
           Expanded(
-            flex: 6,
+            flex: 10,
             child:
                 CameraBoxWithButtons(_formKey, _nameController, _ageController),
           ),
@@ -360,7 +364,7 @@ class CameraBoxWithButtons extends StatelessWidget {
   }
 }
 
-class TwoButtonRow extends StatelessWidget {
+class TwoButtonRow extends StatefulWidget {
   const TwoButtonRow(
     this.knnNeighbors,
     this.variableDropout,
@@ -372,6 +376,7 @@ class TwoButtonRow extends StatelessWidget {
     this.variableKNN, {
     Key? key,
   }) : super(key: key);
+
   final double _buttonwidthfactor = 0.8;
   final double _buttonheightfactor = 0.8;
   final double _buttonborderradius = 50;
@@ -379,6 +384,11 @@ class TwoButtonRow extends StatelessWidget {
   final double knnNeighbors, variableDropout, accuracyThreshold, initialDropout;
   final bool loop, earlyStop, excelStats, variableKNN;
 
+  @override
+  State<TwoButtonRow> createState() => _TwoButtonRowState();
+}
+
+class _TwoButtonRowState extends State<TwoButtonRow> {
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
@@ -394,19 +404,43 @@ class TwoButtonRow extends StatelessWidget {
           children: [
             ButtonWrap(
               child: FractionallySizedBox(
-                heightFactor: _buttonheightfactor,
-                widthFactor: _buttonwidthfactor,
+                heightFactor: widget._buttonheightfactor,
+                widthFactor: widget._buttonwidthfactor,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     primary: Colors.orange,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          _buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
+                      borderRadius: BorderRadius.circular(widget
+                          ._buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
+                    bool autosave;
+                    if (widget.accuracyThreshold == 0) {
+                      autosave = false;
+                    } else {
+                      autosave = true;
+                    }
                     debugPrint(
-                        'loop: $loop, Early Stop: $earlyStop\nExcel stats: $excelStats, Variable KNN: $variableKNN\n Accuracy Threshold: $accuracyThreshold, Initial Dropout: $initialDropout\nKNN neighbors: $knnNeighbors\nVariable Dropout: $variableDropout');
+                        'loop: ${widget.loop}, Early Stop: ${widget.earlyStop}\nExcel stats: ${widget.excelStats}, Variable KNN: ${widget.variableKNN}\n Accuracy Threshold: ${widget.accuracyThreshold}, Initial Dropout: ${widget.initialDropout}\nKNN neighbors: ${widget.knnNeighbors}\nVariable Dropout: ${widget.variableDropout}\autosave: $autosave');
+                    http.Response response = await http.get(Uri.parse(
+                        'http://localhost:5000/trainmodel?loop=${widget.loop}&es=${widget.earlyStop}&estats=${widget.excelStats}&vknn=${widget.variableKNN}&at=${widget.accuracyThreshold}&dropout=${widget.initialDropout}&knn=${widget.knnNeighbors}&vdropout=${widget.variableDropout}&autosave=$autosave&save=False'));
+                    if (response.statusCode == 200) {
+                      String data = response.body;
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(data),
+                        duration: const Duration(seconds: 10),
+                      ));
+                    } else {
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          duration: Duration(seconds: 10),
+                          content: Text('An error occured during training'),
+                        ),
+                      );
+                    }
                   },
                   child: Text(
                     'Train Model',
@@ -417,24 +451,35 @@ class TwoButtonRow extends StatelessWidget {
             ),
             ButtonWrap(
               child: FractionallySizedBox(
-                heightFactor: _buttonheightfactor,
-                widthFactor: _buttonwidthfactor,
+                heightFactor: widget._buttonheightfactor,
+                widthFactor: widget._buttonwidthfactor,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     primary: Colors.orange,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                          _buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
+                      borderRadius: BorderRadius.circular(widget
+                          ._buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (BuildContext context) {
-                          return const SelectDatasetPage();
-                        },
-                      ),
-                    );
+                  onPressed: () async {
+                    http.Response response = await http.get(Uri.parse(
+                        'http://localhost:5000/trainmodel?loop=${widget.loop}&es=${widget.earlyStop}&estats=${widget.excelStats}&vknn=${widget.variableKNN}&at=${widget.accuracyThreshold}&dropout=${widget.initialDropout}&knn=${widget.knnNeighbors}&vdropout=${widget.variableDropout}&autosave=False&save=True'));
+                    if (response.statusCode == 200) {
+                      String data = response.body;
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(data),
+                          duration: const Duration(seconds: 10),
+                        ),
+                      );
+                    } else {
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('An error occured during saving'),
+                        duration: Duration(seconds: 10),
+                      ));
+                    }
                   },
                   child: Text(
                     'Save Model',

@@ -33,6 +33,7 @@ class RootPage extends StatefulWidget {
 class _RootPageState extends State<RootPage> {
   int currentPage = 0;
   List<Widget> pages = const [AddImagePage(), TestingPage()];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
