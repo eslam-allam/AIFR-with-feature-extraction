@@ -6,9 +6,10 @@ from collections import deque
 import numpy as np
 from mediapipecam import face_mesh
 from allign import proccess_image
-from AIFR_VGG import MODEL_SAVE_DIRECTORY, main, save_model
+from AIFR_VGG import MODEL_SAVE_DIRECTORY, load_model, main, save_model
 import logging
 import traceback
+from keras_vggface import utils
 
 
 mylogs = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ mylogs.addHandler(logging.getLogger('AIFR_VGG'))
 
 
 model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory = None, None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None
+test_model, test_m1, test_m2, test_flatten, test_Ax1, test_Ax2, test_Ax3, test_Ay1, test_Ay2, test_Ay3, test_classifier, test_DCA_accuracy, test_save_excel_stats, test_y_test_ages, test_predicted, test_history, test_y_test, test_save_directory = main(model_name='model7_accuracy_89.55', from_model=True, accuracy_threshold=0.0)
 
 NEW_IMAGE_DIRECTORY = '/home/eslamallam/Python/AIFR-with-feature-extraction/datasets/FGNET/newImages'
 HEADERS = {'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'}
@@ -75,7 +77,38 @@ def generate_frames():
     camera.release()
     
     
+@app.route("/predict")
+def predict():
+    frame = frames[-1]
+    frame = proccess_image(frame)
+    frame =  utils.preprocess_input(frame,version=2)
+    fc1 = m1.predict(frame)
+    fc2 = m2.predict(frame)
+    pooling = pooling.predict(frame)
 
+    fc1 = fc1.T
+    fc2 = fc2.T
+    pooling = pooling.T
+
+
+    testX = np.matmul(Ax1,fc1)
+    testY = np.matmul(Ay1, fc2)
+    test_vector1 = np.concatenate((testX,testY))
+
+    testX = np.matmul(Ax2,fc1)
+    testY = np.matmul(Ay2, pooling)
+    test_vector2 = np.concatenate((testX,testY))
+
+    testX = np.matmul(Ax3,test_vector1)
+    testY = np.matmul(Ay3, test_vector2)
+    test_vector3 = np.concatenate((testX,testY))
+
+    test_vector = test_vector3.T
+
+
+    predicted = classifier.predict(test_vector)
+
+    print(f'prediction: {predicted}')
 
 
 @app.route("/")

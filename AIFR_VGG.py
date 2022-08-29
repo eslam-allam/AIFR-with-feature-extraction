@@ -159,33 +159,56 @@ def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
     
     return x_train, y_train, x_test, y_test, y_train_categorical, y_test_ages, num_classes
 
-def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=True, batch_size=128, model_summary=False, num_classes=82, drop_out= DROPOUT):
+def load_model(directory=MODEL_SAVE_DIRECTORY, model_name=''):
+    
 
-    mylogs.info('CREATING MODEL')
+    if not model_name:
+        model_name = sorted(os.listdir(directory))[-1]
+    
+    mylogs.info(f'LOADING MODEL {model_name} FROM "{directory+model_name+"/compressed_models.pcl"}"')
 
-    base_model = VGGFace(
-        model="senet50", include_top=True, input_shape=(224, 224, 3), pooling="avg"
-    )
-    base_model.trainable = False  ## Not trainable weights
+    try:
+        with open(directory+model_name+'/compressed_models.pcl', 'rb') as f:
+            model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
+        
+        mylogs.info(f'MODEL LOADED SUCCESFULLY')
+        return model
+    except:
+        mylogs.error('UNABLE TO LOAD MODEL.')
 
 
-    x = base_model.layers[-2].output
-    dense1 = Dense(
-        4096,
-        activation="relu",
-        name="fc1",
-        kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
-    )(x)
-    drop1 = Dropout(drop_out)(dense1)
-    dense2 = Dense(
-        4096,
-        activation="relu",
-        name="fc2",
-        kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
-    )(drop1)
-    drop = Dropout(drop_out)(dense2)
-    predictions = Dense(num_classes, activation="softmax")(drop)  
-    model = Model(inputs=base_model.input, outputs=predictions)
+def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=True, batch_size=128, model_summary=False, num_classes=82, drop_out= DROPOUT, from_model=False, model=None):
+
+    if not from_model:
+        mylogs.info('CREATING MODEL')
+
+        base_model = VGGFace(
+            model="senet50", include_top=True, input_shape=(224, 224, 3), pooling="avg"
+        )
+        base_model.trainable = False  ## Not trainable weights
+
+
+        x = base_model.layers[-2].output
+        dense1 = Dense(
+            4096,
+            activation="relu",
+            name="fc1",
+            kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+        )(x)
+        drop1 = Dropout(drop_out)(dense1)
+        dense2 = Dense(
+            4096,
+            activation="relu",
+            name="fc2",
+            kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
+        )(drop1)
+        drop = Dropout(drop_out)(dense2)
+        predictions = Dense(num_classes, activation="softmax")(drop)  
+        model = Model(inputs=base_model.input, outputs=predictions)
+    else:
+        x = model.layers[-2].output
+        predictions = Dense(num_classes, activation="softmax")(x)
+        model = Model(inputs=model.input, outputs=predictions)
 
     
     if model_summary: 
@@ -196,8 +219,11 @@ def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=Tru
 
     
     mylogs.info('COMPILING MODEL')
+    if from_model: learning_rate = 0.00005
+    else: learning_rate = 0.001
+    opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(
-        optimizer="adam",
+        optimizer=opt,
         loss="categorical_crossentropy",
         metrics=["accuracy"],
     )
@@ -399,25 +425,33 @@ def  notify_telegram(model_name=None, accuracy=None, telegram_bot_token=None, te
         mylogs.warning('**********************STATUS:NO OK**********************')
         mylogs.warning('MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID')
 
-def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD, model_summary=False, drop_out=DROPOUT, variable_dropout=None, variable_knn=False):
-    mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
-                                LOOP = {loop}, EARLY_STOP = {early_stop}, SAVE_EXCEL_STATS = {save_excel_stats}, MODEL_SUMMARY = {model_summary}
-                                NUMBER_OF_KNN_NEIGHBOURS = {KNN_neighbors}
-                                ACCURACY_THRESHOLD = {accuracy_threshold}
-                                DROPOUT = {drop_out}
-                                VARIABLE_DROPOUT = {variable_dropout}
-                                KNN_NEIGHBORS = {KNN_neighbors}
-                                VARIABLE_KNN_NEIGHBORS = {variable_knn}
-                                SAVE_DIRECTORY = {save_directory}
-                                SYSTEM_SHUTDOWN = {args.shutdown}
-    ------------------------------------------------------------------------------------------------------------------------------------------------''')
+def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD, model_summary=False, drop_out=DROPOUT, variable_dropout=None, variable_knn=False, from_model = False, model_name=''):
     
+    if not from_model:
+        mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
+                                    LOOP = {loop}, EARLY_STOP = {early_stop}, SAVE_EXCEL_STATS = {save_excel_stats}, MODEL_SUMMARY = {model_summary}
+                                    NUMBER_OF_KNN_NEIGHBOURS = {KNN_neighbors}
+                                    ACCURACY_THRESHOLD = {accuracy_threshold}
+                                    DROPOUT = {drop_out}
+                                    VARIABLE_DROPOUT = {variable_dropout}
+                                    KNN_NEIGHBORS = {KNN_neighbors}
+                                    VARIABLE_KNN_NEIGHBORS = {variable_knn}
+                                    SAVE_DIRECTORY = {save_directory}
+                                    SYSTEM_SHUTDOWN = {args.shutdown}
+        ------------------------------------------------------------------------------------------------------------------------------------------------''')
+        
     
     
     x_train, y_train, x_test, y_test, y_train_categorical, y_test_ages, num_classes = load_dataset()
 
     while True:
-        model, history = build_model(x_train, y_train_categorical, early_stop=early_stop, model_summary=model_summary, num_classes=num_classes, drop_out=drop_out)
+
+        if not from_model:
+            model, history = build_model(x_train, y_train_categorical, early_stop=early_stop, model_summary=model_summary, num_classes=num_classes, drop_out=drop_out)
+        else: 
+            model = load_model(model_name=model_name)
+            model, history = build_model(x_train, y_train_categorical, early_stop=False, model_summary=model_summary, num_classes=num_classes, drop_out=drop_out, from_model=True, model=model, epochs=10, variable_lr=False)
+
         fused_vector, test_vector, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(x_train, x_test,y_train, model)
         
         for i in range(KNN_neighbors,KNN_neighbors+10):
