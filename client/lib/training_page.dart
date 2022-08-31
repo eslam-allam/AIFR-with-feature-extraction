@@ -1,6 +1,6 @@
 import 'package:clay_containers/widgets/clay_container.dart';
-import 'package:demo_gui_flutter/add_image_page.dart';
-import 'package:demo_gui_flutter/select_dataset_page.dart';
+import 'package:client/add_image_page.dart';
+import 'package:client/select_dataset_page.dart';
 import 'package:flutter/material.dart';
 
 class TrainingPage extends StatelessWidget {
@@ -64,15 +64,7 @@ class TrainingPage extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(15),
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (BuildContext context) {
-                              return const AddImagePage();
-                            },
-                          ),
-                        );
-                      },
+                      onPressed: () {},
                       child: const Text(
                         'Add image to dataset',
                         textScaleFactor: 2.0,

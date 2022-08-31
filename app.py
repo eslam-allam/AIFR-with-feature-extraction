@@ -33,13 +33,15 @@ mylogs.addHandler(logging.getLogger('AIFR_VGG'))
 
 
 
-model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory = None, None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None
+'''model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory = None, None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None
 test_model, test_m1, test_m2, test_flatten, test_Ax1, test_Ax2, test_Ax3, test_Ay1, test_Ay2, test_Ay3, test_classifier, test_DCA_accuracy, test_save_excel_stats, test_y_test_ages, test_predicted, test_history, test_y_test, test_save_directory = main(model_name='model7_accuracy_89.55', from_model=True, accuracy_threshold=0.0)
-
+'''
 NEW_IMAGE_DIRECTORY = '/home/eslamallam/Python/AIFR-with-feature-extraction/datasets/FGNET/newImages'
 HEADERS = {'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'}
 
-
+video_error = cv2.imread('guiImages/video_error.png')
+ret, video_error = cv2.imencode('.jpg',video_error)
+video_error = video_error.tobytes()
 
 app = Flask(__name__)
 
@@ -55,13 +57,19 @@ current_pic = None
 name = False
 
 def generate_frames():
-    camera = cv2.VideoCapture(0)  
+    camera = cv2.VideoCapture(2)
+    camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1080)
+    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+    
     while True:
          
         ## read the camera frame
         success,frame=camera.read()
         frames.append(frame)
-        frame = face_mesh(frame)
+        try:
+            frame = face_mesh(frame)
+        except :
+            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + video_error + b'\r\n')
         if not success:
             break
         else:
@@ -70,9 +78,9 @@ def generate_frames():
 
 
         
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-        
+        yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    
+            
         #time.sleep(0.1)
     camera.release()
     
@@ -118,7 +126,7 @@ def hello_world():
 @app.route('/video')
 def video():
     
-    return Response(generate_frames(),mimetype='multipart/x-mixed-replace;boundary=frame', status=200, headers=HEADERS)
+    return Response(generate_frames(),mimetype='multipart/x-mixed-replace;boundary=frame', headers=HEADERS)
 
 @app.route('/capture', methods=['GET', 'POST', 'OPTIONS'])
 def capture():

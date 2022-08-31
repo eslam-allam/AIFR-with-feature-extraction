@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:demo_gui_flutter/training_page.dart';
-import 'package:demo_gui_flutter/add_image_page.dart';
-import 'package:demo_gui_flutter/profile_page.dart';
+import 'package:client/training_page.dart';
+import 'package:client/add_image_page.dart';
+import 'package:client/profile_page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -32,7 +32,8 @@ class RootPage extends StatefulWidget {
 
 class _RootPageState extends State<RootPage> {
   int currentPage = 0;
-  List<Widget> pages = const [AddImagePage(), TestingPage()];
+
+  List<Widget> pages = [AddImagePage(), const TestingPage()];
 
   @override
   Widget build(BuildContext context) {

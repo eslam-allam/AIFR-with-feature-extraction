@@ -176,7 +176,6 @@ def load_model(directory=MODEL_SAVE_DIRECTORY, model_name=''):
     except:
         mylogs.error('UNABLE TO LOAD MODEL.')
 
-
 def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=True, batch_size=128, model_summary=False, num_classes=82, drop_out= DROPOUT, from_model=False, model=None):
 
     if not from_model:

@@ -1,16 +1,17 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_mjpeg/flutter_mjpeg.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:clay_containers/widgets/clay_container.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
-import 'package:universal_html/html.dart' as html;
-import 'package:demo_gui_flutter/select_dataset_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:flutter_dropzone/flutter_dropzone.dart';
 import 'package:custom_radio_grouped_button/custom_radio_grouped_button.dart';
+import 'package:video_player/video_player.dart';
+import 'main.dart';
 
+// ignore: must_be_immutable
 class AddImagePage extends StatefulWidget {
   const AddImagePage({super.key});
 
@@ -32,19 +33,22 @@ class _AddImagePageState extends State<AddImagePage> {
   final _formKey = GlobalKey<FormState>();
 
   @override
-  build(BuildContext context) {
+  Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
     var padding = MediaQuery.of(context).viewPadding;
     double heightNoToolbar = height - padding.top - kToolbarHeight;
     double edge20 = (width * 0.01 + heightNoToolbar * 0.02) / 2;
+
+    bool isRunning = true;
+
     return Container(
       constraints: BoxConstraints(maxWidth: width, maxHeight: heightNoToolbar),
       decoration: const BoxDecoration(
         image: DecorationImage(
           fit: BoxFit.fill,
           image: AssetImage(
-            '/home/eslamallam/Python/AIFR-with-feature-extraction/app-demo/client/flutter/demo_gui_flutter/images/add_image_background.jpg',
+            '/home/eslamallam/Python/AIFR_with_feature_extraction/client/images/add_image_background.jpg',
           ),
         ),
       ),
@@ -293,72 +297,21 @@ class _AddImagePageState extends State<AddImagePage> {
           ),
           Expanded(
             flex: 10,
-            child:
-                CameraBoxWithButtons(_formKey, _nameController, _ageController),
+            child: ClayContainer(
+              height: heightNoToolbar,
+              color: const Color(0xff121212),
+              borderRadius: 10,
+              child: Padding(
+                padding: EdgeInsets.all(edge20 * 1.5),
+                child: Mjpeg(
+                  fit: BoxFit.fill,
+                  isLive: isRunning,
+                  stream: 'http://localhost:5000/video',
+                ),
+              ),
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class CameraBoxWithButtons extends StatelessWidget {
-  const CameraBoxWithButtons(
-    this.formKey,
-    this.nameController,
-    this.ageController, {
-    Key? key,
-  }) : super(key: key);
-
-  final TextEditingController nameController, ageController;
-  final GlobalKey<FormState> formKey;
-
-  @override
-  Widget build(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
-    double height = MediaQuery.of(context).size.height;
-    var padding = MediaQuery.of(context).viewPadding;
-    double height_no_toolbar = height - padding.top - kToolbarHeight;
-
-    double edge20 = (width * 0.01 + height_no_toolbar * 0.02) / 2;
-    return ClayContainer(
-      color: const Color(0xff121212),
-      borderRadius: 10,
-      child: FractionallySizedBox(
-        alignment: Alignment.centerRight,
-        widthFactor: 1,
-        child: Stack(
-          alignment: Alignment.topLeft,
-          children: [
-            Padding(
-              padding: EdgeInsets.all(edge20 * 1.5),
-              child: CameraFeed(formKey, nameController, ageController),
-            ),
-            Padding(
-              padding: EdgeInsets.only(top: edge20 * 2, left: edge20 * 2),
-              child: IconButton(
-                onPressed: () {
-                  if (!formKey.currentState!.validate()) {
-                    // If the form is valid, display a snackbar. In the real world,
-                    // you'd often call a server or save the information in a database.
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Please fill the required fields')),
-                    );
-                  } else {
-                    captureAlert(
-                        context, null, nameController.text, ageController.text);
-                  }
-                },
-                icon: const Icon(
-                  Icons.camera_alt,
-                  color: Colors.black,
-                ),
-                iconSize: edge20 * 3,
-              ),
-            )
-          ],
-        ),
       ),
     );
   }
@@ -408,7 +361,7 @@ class _TwoButtonRowState extends State<TwoButtonRow> {
                 widthFactor: widget._buttonwidthfactor,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.orange,
+                    backgroundColor: Colors.orange,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(widget
                           ._buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
@@ -422,7 +375,7 @@ class _TwoButtonRowState extends State<TwoButtonRow> {
                       autosave = true;
                     }
                     debugPrint(
-                        'loop: ${widget.loop}, Early Stop: ${widget.earlyStop}\nExcel stats: ${widget.excelStats}, Variable KNN: ${widget.variableKNN}\n Accuracy Threshold: ${widget.accuracyThreshold}, Initial Dropout: ${widget.initialDropout}\nKNN neighbors: ${widget.knnNeighbors}\nVariable Dropout: ${widget.variableDropout}\autosave: $autosave');
+                        'loop: ${widget.loop}, Early Stop: ${widget.earlyStop}\nExcel stats: ${widget.excelStats}, Variable KNN: ${widget.variableKNN}\n Accuracy Threshold: ${widget.accuracyThreshold}, Initial Dropout: ${widget.initialDropout}\nKNN neighbors: ${widget.knnNeighbors}\nVariable Dropout: ${widget.variableDropout}\nautosave: $autosave');
                     http.Response response = await http.get(Uri.parse(
                         'http://localhost:5000/trainmodel?loop=${widget.loop}&es=${widget.earlyStop}&estats=${widget.excelStats}&vknn=${widget.variableKNN}&at=${widget.accuracyThreshold}&dropout=${widget.initialDropout}&knn=${widget.knnNeighbors}&vdropout=${widget.variableDropout}&autosave=$autosave&save=False'));
                     if (response.statusCode == 200) {
@@ -455,7 +408,7 @@ class _TwoButtonRowState extends State<TwoButtonRow> {
                 widthFactor: widget._buttonwidthfactor,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.orange,
+                    backgroundColor: Colors.orange,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(widget
                           ._buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
@@ -627,70 +580,6 @@ class ButtonWrap extends StatelessWidget {
   }
 }
 
-class CameraFeed extends StatefulWidget {
-  final TextEditingController nameController, ageController;
-  final GlobalKey<FormState> formKey;
-  const CameraFeed(this.formKey, this.nameController, this.ageController,
-      {Key? key})
-      : super(key: key);
-
-  @override
-  CameraFeedState createState() => CameraFeedState();
-}
-
-class CameraFeedState extends State<CameraFeed> {
-  late html.ImageElement _element;
-  late DropzoneViewController controller;
-
-  @override
-  void initState() {
-    _element = html.ImageElement()
-      ..style.height = '100%'
-      ..style.width = '100%'
-      ..style.border = '0'
-      ..style.cursor = 'None'
-      ..setAttribute('alt', 'Image not found. API must have crashed.')
-      ..setAttribute('onerror',
-          "this.onerror=null;this.src='images/facial-recognition-connected-real-estate.png';")
-      ..src = "http://localhost:5000/video";
-
-    // ignore:undefined_prefixed_name
-    ui.platformViewRegistry
-        .registerViewFactory('CameraView', (int viewId) => _element);
-
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        const HtmlElementView(viewType: 'CameraView'),
-        DropzoneView(
-            operation: DragOperation.copy,
-            onCreated: (DropzoneViewController ctrl) => controller = ctrl,
-            onDrop: (dynamic ev) async {
-              if (!widget.formKey.currentState!.validate()) {
-                // If the form is valid, display a snackbar. In the real world,
-                // you'd often call a server or save the information in a database.
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Please fill the required fields')),
-                );
-              } else {
-                final image = await controller.getFileData(ev);
-
-                // ignore: use_build_context_synchronously
-                captureAlert(context, image, widget.nameController.text,
-                    widget.ageController.text,
-                    fromfile: true);
-              }
-            }),
-      ],
-    );
-  }
-}
-
 Future _asyncFileUpload(
     String name, String age, Uint8List image, String url) async {
   //create multipart request for POST or PATCH method
@@ -752,9 +641,9 @@ class TextNumberInput extends StatelessWidget {
     return TextFormField(
       validator: (value) {
         if (value == null || value.isEmpty) {
-          String _errorMessage() =>
+          String errorMessage() =>
               text ? 'Please enter your name' : 'Please enter your age';
-          return _errorMessage();
+          return errorMessage();
         }
         return null;
       },
@@ -787,4 +676,67 @@ class TextNumberInput extends StatelessWidget {
       : allowDecimal
           ? r'[0-9]+[,.]{0,1}[0-9]*'
           : r'[0-9]';
+}
+
+class VideoPlayerScreen extends StatefulWidget {
+  const VideoPlayerScreen({super.key});
+
+  @override
+  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+  late Future<void> _initializeVideoPlayerFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(
+      'http://localhost:5000/video',
+    );
+    _initializeVideoPlayerFuture = _controller.initialize();
+    _controller.setLooping(true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: FutureBuilder(
+        future: _initializeVideoPlayerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return AspectRatio(
+              aspectRatio: _controller.value.aspectRatio,
+              child: VideoPlayer(_controller),
+            );
+          } else {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          setState(() {
+            if (_controller.value.isPlaying) {
+              _controller.pause();
+            } else {
+              _controller.play();
+            }
+          });
+        },
+        child: Icon(
+          _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+        ),
+      ),
+    );
+  }
 }

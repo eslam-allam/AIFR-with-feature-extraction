@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "demo_gui_flutter",
-            "cwd": "app-demo/client/flutter/demo_gui_flutter",
+            "cwd": "client",
             "request": "launch",
             "type": "dart"
         },
