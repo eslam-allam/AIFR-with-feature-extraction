@@ -57,28 +57,37 @@ current_pic = None
 name = False
 
 def generate_frames():
-    camera = cv2.VideoCapture(2)
+    camera = cv2.VideoCapture(0)
     camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1080)
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     
     while True:
          
-        ## read the camera frame
-        success,frame=camera.read()
-        frames.append(frame)
         try:
+        ## read the camera frame
+            success,frame=camera.read()
+            center = frame.shape[0] / 2, frame.shape[1] / 2
+            h = frame.shape[0]
+            w = frame.shape[0]
+            x = center[1] - w/2
+            y = center[0] - h/2
+
+            frame = frame[int(y):int(y+h), int(x):int(x+w)]
+            frames.append(frame)
+            
             frame = face_mesh(frame)
-        except :
+            
+            if not success:
+                break
+            else:
+                ret,buffer=cv2.imencode('.jpg',frame)
+                frame=buffer.tobytes()
+
+
+            
+            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        except AttributeError:
             yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + video_error + b'\r\n')
-        if not success:
-            break
-        else:
-            ret,buffer=cv2.imencode('.jpg',frame)
-            frame=buffer.tobytes()
-
-
-        
-        yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
     
             
         #time.sleep(0.1)
@@ -202,7 +211,7 @@ def trainmodel():
     vknn = string_to_bool(args['vknn'])
     at = float(args['at']) / 100
     dropout = float(args['dropout'])
-    knn = int(args['knn'])
+    knn = int(float(args['knn']))
     vdropout = float(args['vdropout'])
     save = string_to_bool(args['save'])
     auto_save = string_to_bool(args['autosave'])

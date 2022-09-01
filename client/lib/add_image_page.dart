@@ -1,15 +1,10 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_mjpeg/flutter_mjpeg.dart';
-import 'package:http_parser/http_parser.dart';
 import 'package:clay_containers/widgets/clay_container.dart';
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:rflutter_alert/rflutter_alert.dart';
-import 'package:flutter_dropzone/flutter_dropzone.dart';
+import 'package:client/widgets.dart';
 import 'package:custom_radio_grouped_button/custom_radio_grouped_button.dart';
-import 'package:video_player/video_player.dart';
-import 'main.dart';
+import 'package:file_picker/file_picker.dart';
 
 // ignore: must_be_immutable
 class AddImagePage extends StatefulWidget {
@@ -31,6 +26,10 @@ class _AddImagePageState extends State<AddImagePage> {
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _dragging = false;
+  bool _imageLoaded = true;
+  final dynamic _imageFilesList = [];
+  final List<Uint8List> _imageFilesBytesList = [];
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +39,18 @@ class _AddImagePageState extends State<AddImagePage> {
     double heightNoToolbar = height - padding.top - kToolbarHeight;
     double edge20 = (width * 0.01 + heightNoToolbar * 0.02) / 2;
 
-    bool isRunning = true;
+    getImageList(String type, List files) async {
+      for (int i = 0; i < files.length; i++) {
+        Uint8List currentImage = Uint8List(1);
+        if (type == 'xfile') {
+          currentImage = await files[i].readAsBytes();
+        } else {
+          currentImage = files[i].bytes;
+        }
+        _imageFilesBytesList.add(currentImage);
+      }
+      setState(() {});
+    }
 
     return Container(
       constraints: BoxConstraints(maxWidth: width, maxHeight: heightNoToolbar),
@@ -296,446 +306,299 @@ class _AddImagePageState extends State<AddImagePage> {
             ),
           ),
           Expanded(
-            flex: 10,
-            child: ClayContainer(
+            flex: 9,
+            child: Container(
               height: heightNoToolbar,
-              color: const Color(0xff121212),
-              borderRadius: 10,
-              child: Padding(
-                padding: EdgeInsets.all(edge20 * 1.5),
-                child: Mjpeg(
-                  fit: BoxFit.fill,
-                  isLive: isRunning,
-                  stream: 'http://localhost:5000/video',
-                ),
+              decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(Radius.circular(10)),
+                  color: !_dragging
+                      ? Colors.grey.withOpacity(0.5)
+                      : Colors.grey.withOpacity(1),
+                  image: DecorationImage(
+                      image: _imageFilesList.length == 0
+                          ? const AssetImage(
+                              'images/Drag_images_here_stripped.png')
+                          : const AssetImage('images/empty.png'))),
+              child: Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  FractionallySizedBox(
+                    heightFactor: 1,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                          bottom: edge20 * 0.5, top: edge20 * 0.5),
+                      child: DropTarget(
+                        onDragDone: (detail) {
+                          setState(() {
+                            _imageLoaded = false;
+                            _imageFilesList.addAll(detail.files);
+                            getImageList('xfile', detail.files);
+                            _imageLoaded = true;
+                          });
+                        },
+                        onDragEntered: (detail) {
+                          setState(() {
+                            _dragging = true;
+                          });
+                        },
+                        onDragExited: (detail) {
+                          setState(() {
+                            _dragging = false;
+                          });
+                        },
+                        child: ListView.builder(
+                          itemExtent: edge20 * 10,
+                          scrollDirection: Axis.vertical,
+                          shrinkWrap: true,
+                          itemCount: _imageFilesList.length,
+                          itemBuilder: (context, index) {
+                            return Card(
+                              elevation: 8.0,
+                              margin: EdgeInsets.symmetric(
+                                  horizontal: edge20 * 0.5,
+                                  vertical: edge20 * 0.3),
+                              child: Container(
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(10)),
+                                    color: Color.fromRGBO(64, 75, 96, .9)),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: Container(
+                                        padding: EdgeInsets.only(
+                                            right: edge20,
+                                            left: edge20,
+                                            top: edge20,
+                                            bottom: edge20),
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            right: BorderSide(
+                                                width: edge20 / 20,
+                                                color: Colors.white24),
+                                          ),
+                                        ),
+                                        child: _imageFilesBytesList.length >=
+                                                index + 1
+                                            ? Container(
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                      width: 3,
+                                                      color:
+                                                          const Color.fromARGB(
+                                                              255,
+                                                              150,
+                                                              148,
+                                                              148)),
+                                                  borderRadius:
+                                                      const BorderRadius.all(
+                                                          Radius.circular(20)),
+                                                  image: DecorationImage(
+                                                      image: MemoryImage(
+                                                        _imageFilesBytesList[
+                                                            index],
+                                                      ),
+                                                      fit: BoxFit.fitWidth,
+                                                      alignment:
+                                                          Alignment.center),
+                                                ),
+                                              )
+                                            : const CircularProgressIndicator(),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 6,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: FractionallySizedBox(
+                                              heightFactor: 0.3,
+                                              alignment: Alignment.bottomRight,
+                                              child: Padding(
+                                                padding: EdgeInsets.only(
+                                                    left: edge20),
+                                                child: Text(
+                                                  '${_imageFilesList[index].name}',
+                                                  style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: edge20 * 0.9),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Padding(
+                                              padding: EdgeInsets.only(
+                                                  left: edge20 * 0.55),
+                                              child: FractionallySizedBox(
+                                                heightFactor: 1,
+                                                alignment: Alignment.topLeft,
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          bottom: 50),
+                                                  child: Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .center,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: <Widget>[
+                                                      const Expanded(
+                                                        flex: 1,
+                                                        child: Icon(
+                                                            Icons.folder,
+                                                            color: Colors
+                                                                .yellowAccent),
+                                                      ),
+                                                      Expanded(
+                                                        flex: 10,
+                                                        child: Padding(
+                                                          padding:
+                                                              EdgeInsets.only(
+                                                                  top: edge20 *
+                                                                      0.2),
+                                                          child: Text(
+                                                            _imageFilesList[
+                                                                    index]
+                                                                .path,
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize:
+                                                                    edge20 *
+                                                                        0.75),
+                                                          ),
+                                                        ),
+                                                      )
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 5,
+                                      child: FractionallySizedBox(
+                                        widthFactor: 1,
+                                        child: Padding(
+                                          padding: EdgeInsets.only(
+                                              right: edge20 * 2.5),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              const Expanded(
+                                                child: TextNumberInput(
+                                                  label: 'Age:',
+                                                  allowDecimal: false,
+                                                  text: false,
+                                                  maxlen: 2,
+                                                ),
+                                              ),
+                                              Padding(
+                                                padding: EdgeInsets.only(
+                                                    left: edge20 * 2),
+                                                child: IconButton(
+                                                  onPressed: () {},
+                                                  icon: Icon(
+                                                    Icons.check_box,
+                                                    color: Colors.green,
+                                                    size: edge20 * 2,
+                                                  ),
+                                                ),
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  FractionallySizedBox(
+                    widthFactor: 1,
+                    heightFactor: 1,
+                    alignment: Alignment.center,
+                    child: FractionallySizedBox(
+                      widthFactor: 0.1,
+                      heightFactor: 0.1,
+                      child: Visibility(
+                        visible: !_imageLoaded,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: edge20 * 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        EdgeInsets.only(top: edge20 * 0.8, right: edge20 * 0.8),
+                    child: ElevatedButton.icon(
+                        style: ButtonStyle(
+                          backgroundColor:
+                              const MaterialStatePropertyAll(Colors.white),
+                          minimumSize: MaterialStatePropertyAll(
+                            Size(edge20, edge20 * 3),
+                          ),
+                        ),
+                        onPressed: (() async {
+                          setState(() {
+                            _imageLoaded = false;
+                          });
+
+                          FilePickerResult? result =
+                              await FilePicker.platform.pickFiles(
+                            withData: true,
+                            allowMultiple: true,
+                            type: FileType.custom,
+                            allowedExtensions: ['jpg', 'png', 'JPG', 'PNG'],
+                          );
+                          if (result != null) {
+                            List<PlatformFile> files = result.files;
+
+                            setState(() {
+                              _imageFilesList.addAll(files);
+                              getImageList('platformfile', files);
+                            });
+                          } else {
+                            // User canceled the picker
+                          }
+                          setState(() {
+                            _imageLoaded = true;
+                          });
+                        }),
+                        label: const Text('Pick Images'),
+                        icon: const Icon(Icons.folder)),
+                  ),
+                ],
               ),
             ),
-          ),
+          )
         ],
-      ),
-    );
-  }
-}
-
-class TwoButtonRow extends StatefulWidget {
-  const TwoButtonRow(
-    this.knnNeighbors,
-    this.variableDropout,
-    this.accuracyThreshold,
-    this.initialDropout,
-    this.loop,
-    this.earlyStop,
-    this.excelStats,
-    this.variableKNN, {
-    Key? key,
-  }) : super(key: key);
-
-  final double _buttonwidthfactor = 0.8;
-  final double _buttonheightfactor = 0.8;
-  final double _buttonborderradius = 50;
-
-  final double knnNeighbors, variableDropout, accuracyThreshold, initialDropout;
-  final bool loop, earlyStop, excelStats, variableKNN;
-
-  @override
-  State<TwoButtonRow> createState() => _TwoButtonRowState();
-}
-
-class _TwoButtonRowState extends State<TwoButtonRow> {
-  @override
-  Widget build(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
-    double edge20 = width * 0.01;
-    return Expanded(
-      flex: 1,
-      child: FractionallySizedBox(
-        heightFactor: 0.4,
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ButtonWrap(
-              child: FractionallySizedBox(
-                heightFactor: widget._buttonheightfactor,
-                widthFactor: widget._buttonwidthfactor,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(widget
-                          ._buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
-                    ),
-                  ),
-                  onPressed: () async {
-                    bool autosave;
-                    if (widget.accuracyThreshold == 0) {
-                      autosave = false;
-                    } else {
-                      autosave = true;
-                    }
-                    debugPrint(
-                        'loop: ${widget.loop}, Early Stop: ${widget.earlyStop}\nExcel stats: ${widget.excelStats}, Variable KNN: ${widget.variableKNN}\n Accuracy Threshold: ${widget.accuracyThreshold}, Initial Dropout: ${widget.initialDropout}\nKNN neighbors: ${widget.knnNeighbors}\nVariable Dropout: ${widget.variableDropout}\nautosave: $autosave');
-                    http.Response response = await http.get(Uri.parse(
-                        'http://localhost:5000/trainmodel?loop=${widget.loop}&es=${widget.earlyStop}&estats=${widget.excelStats}&vknn=${widget.variableKNN}&at=${widget.accuracyThreshold}&dropout=${widget.initialDropout}&knn=${widget.knnNeighbors}&vdropout=${widget.variableDropout}&autosave=$autosave&save=False'));
-                    if (response.statusCode == 200) {
-                      String data = response.body;
-                      // ignore: use_build_context_synchronously
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(data),
-                        duration: const Duration(seconds: 10),
-                      ));
-                    } else {
-                      // ignore: use_build_context_synchronously
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          duration: Duration(seconds: 10),
-                          content: Text('An error occured during training'),
-                        ),
-                      );
-                    }
-                  },
-                  child: Text(
-                    'Train Model',
-                    textScaleFactor: edge20 * 0.085,
-                  ),
-                ),
-              ),
-            ),
-            ButtonWrap(
-              child: FractionallySizedBox(
-                heightFactor: widget._buttonheightfactor,
-                widthFactor: widget._buttonwidthfactor,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(widget
-                          ._buttonborderradius), //change border radius of this beautiful button thanks to BorderRadius.circular function
-                    ),
-                  ),
-                  onPressed: () async {
-                    http.Response response = await http.get(Uri.parse(
-                        'http://localhost:5000/trainmodel?loop=${widget.loop}&es=${widget.earlyStop}&estats=${widget.excelStats}&vknn=${widget.variableKNN}&at=${widget.accuracyThreshold}&dropout=${widget.initialDropout}&knn=${widget.knnNeighbors}&vdropout=${widget.variableDropout}&autosave=False&save=True'));
-                    if (response.statusCode == 200) {
-                      String data = response.body;
-                      // ignore: use_build_context_synchronously
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(data),
-                          duration: const Duration(seconds: 10),
-                        ),
-                      );
-                    } else {
-                      // ignore: use_build_context_synchronously
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('An error occured during saving'),
-                        duration: Duration(seconds: 10),
-                      ));
-                    }
-                  },
-                  child: Text(
-                    'Save Model',
-                    textScaleFactor: edge20 * 0.085,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-void captureAlert(
-  BuildContext context,
-  image,
-  String name,
-  String age, {
-  bool fromfile = false,
-}) async {
-  http.Response response;
-  int code;
-  final String url =
-      'http://localhost:5000/capture?save=False&name=${name.toString()}&age=${age.toString()}';
-  if (!fromfile) {
-    response = await http.get(Uri.parse(url));
-  } else {
-    assert(image != null, 'Passed image is null');
-
-    response = await _asyncFileUpload(name, age, image, url);
-  }
-
-  code = response.statusCode;
-
-  if (code == 403) {
-    const snackBar = SnackBar(
-      duration: Duration(seconds: 5),
-      content: Text(
-          'Face not detected! Please position your face at the middle of the screen and try again'),
-    );
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-    return;
-  } else if (code == 500) {
-    const snackBar = SnackBar(
-      duration: Duration(seconds: 5),
-      content: Text('A server side error has occured. Please try again later.'),
-    );
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-    return;
-  } else {
-    Alert(
-        style: const AlertStyle(
-            backgroundColor: Colors.white70, isCloseButton: false),
-        context: context,
-        desc: "Would you like to save this image?",
-        image: Ink(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white, width: 5),
-            borderRadius: BorderRadius.circular(15),
-            image: DecorationImage(image: MemoryImage(response.bodyBytes)),
-          ),
-          height: 224,
-          width: 224,
-        ),
-        buttons: [
-          DialogButton(
-            color: Colors.red,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: const Text('Delete')),
-                const Icon(
-                  Icons.delete_forever,
-                  color: Colors.white,
-                ),
-              ],
-            ),
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-          ),
-          DialogButton(
-            color: Colors.green,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                    padding: const EdgeInsets.only(right: 15),
-                    child: const Text('Save')),
-                const Icon(
-                  Icons.check_circle_sharp,
-                  color: Colors.white,
-                ),
-              ],
-            ),
-            onPressed: () async {
-              response = await http.get(
-                Uri.parse(
-                  'http://localhost:5000/capture?save=True&name=$name&age=$age',
-                ),
-              );
-              if (response.statusCode == 200) {
-                const snackBar = SnackBar(
-                  duration: Duration(seconds: 5),
-                  content: Text('Image saved succesfully.'),
-                );
-                // ignore: use_build_context_synchronously
-                ScaffoldMessenger.of(context).showSnackBar(snackBar);
-              } else {
-                const snackBar = SnackBar(
-                  duration: Duration(seconds: 5),
-                  content: Text('There was a problem saving your image.'),
-                );
-                // ignore: use_build_context_synchronously
-                ScaffoldMessenger.of(context).showSnackBar(snackBar);
-              }
-
-              // ignore: use_build_context_synchronously
-              Navigator.of(context, rootNavigator: true).pop();
-            },
-          ),
-        ]).show();
-  }
-}
-
-class ButtonWrap extends StatelessWidget {
-  const ButtonWrap({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
-    double edge20 = width * 0.01;
-    return Expanded(
-      child: SizedBox(
-        width: MediaQuery.of(context).size.width,
-        child: Padding(padding: EdgeInsets.all(edge20 * 0.75), child: child),
-      ),
-    );
-  }
-}
-
-Future _asyncFileUpload(
-    String name, String age, Uint8List image, String url) async {
-  //create multipart request for POST or PATCH method
-  var request = http.MultipartRequest("POST", Uri.parse(url));
-  //add text fields
-
-  //create multipart using filepath, string or bytes
-  var pic = http.MultipartFile.fromBytes('files.myImage', image,
-      contentType: MediaType.parse('image/jpeg'), filename: 'image.jpg');
-  //add multipart to request
-
-  request.fields['directory'] = '';
-  request.files.add(pic);
-
-  http.StreamedResponse responsestream = await request.send();
-
-  if (responsestream.statusCode == 200) {
-    http.Response response = await http.get(Uri.parse('$url&getresult=True'));
-    return response;
-  } else {
-    return http.Response('', responsestream.statusCode);
-  }
-}
-
-class TextNumberInput extends StatelessWidget {
-  const TextNumberInput(
-      {Key? key,
-      required this.label,
-      this.controller,
-      this.value,
-      this.onChanged,
-      this.error,
-      this.icon,
-      this.allowDecimal = false,
-      this.text = false,
-      this.maxlen = 2})
-      : super(key: key);
-
-  final TextEditingController? controller;
-
-  final String? value;
-
-  final String label;
-
-  final Function? onChanged;
-
-  final String? error;
-
-  final Widget? icon;
-
-  final bool allowDecimal;
-
-  final bool text;
-
-  final int maxlen;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          String errorMessage() =>
-              text ? 'Please enter your name' : 'Please enter your age';
-          return errorMessage();
-        }
-        return null;
-      },
-      maxLength: maxlen,
-      controller: controller,
-      initialValue: value,
-      onChanged: onChanged as void Function(String)?,
-      readOnly: false,
-      keyboardType: text
-          ? TextInputType.text
-          : TextInputType.numberWithOptions(decimal: allowDecimal),
-      inputFormatters: <TextInputFormatter>[
-        FilteringTextInputFormatter.allow(RegExp(_getRegexString())),
-        TextInputFormatter.withFunction(
-          (oldValue, newValue) => newValue.copyWith(
-            text: newValue.text.replaceAll('.', ','),
-          ),
-        ),
-      ],
-      decoration: InputDecoration(
-        label: Text(label),
-        errorText: error,
-        icon: icon,
-      ),
-    );
-  }
-
-  String _getRegexString() => text
-      ? r'[aA-zZ]+'
-      : allowDecimal
-          ? r'[0-9]+[,.]{0,1}[0-9]*'
-          : r'[0-9]';
-}
-
-class VideoPlayerScreen extends StatefulWidget {
-  const VideoPlayerScreen({super.key});
-
-  @override
-  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
-}
-
-class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  late VideoPlayerController _controller;
-  late Future<void> _initializeVideoPlayerFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = VideoPlayerController.network(
-      'http://localhost:5000/video',
-    );
-    _initializeVideoPlayerFuture = _controller.initialize();
-    _controller.setLooping(true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: FutureBuilder(
-        future: _initializeVideoPlayerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return AspectRatio(
-              aspectRatio: _controller.value.aspectRatio,
-              child: VideoPlayer(_controller),
-            );
-          } else {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            if (_controller.value.isPlaying) {
-              _controller.pause();
-            } else {
-              _controller.play();
-            }
-          });
-        },
-        child: Icon(
-          _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
-        ),
       ),
     );
   }
