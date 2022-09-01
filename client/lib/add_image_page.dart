@@ -24,12 +24,25 @@ class _AddImagePageState extends State<AddImagePage> {
       _excelStats = true,
       _variableKNN = true;
   final _nameController = TextEditingController();
-  final _ageController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+  final List<TextEditingController> _ageControllers = [];
   bool _dragging = false;
   bool _imageLoaded = true;
-  final dynamic _imageFilesList = [];
+  final List<String> _imageNameList = [];
+  final List<String> _imagePathList = [];
   final List<Uint8List> _imageFilesBytesList = [];
+  bool _validateName = true;
+  final List<bool> _validateAge = [];
+  final List<String> _inputAgeList = [];
+  final List<bool> _limitExceeded = [];
+
+  @override
+  void dispose() {
+    for (int i = 0; i < _ageControllers.length; i++) {
+      _ageControllers[i].dispose();
+    }
+    _nameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +70,7 @@ class _AddImagePageState extends State<AddImagePage> {
       decoration: const BoxDecoration(
         image: DecorationImage(
           fit: BoxFit.fill,
+          opacity: 0.65,
           image: AssetImage(
             '/home/eslamallam/Python/AIFR_with_feature_extraction/client/images/add_image_background.jpg',
           ),
@@ -73,50 +87,37 @@ class _AddImagePageState extends State<AddImagePage> {
               widthFactor: 0.9,
               child: Column(
                 children: [
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(left: edge20, top: edge20),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: FractionallySizedBox(
-                              widthFactor: 0.6,
-                              child: TextNumberInput(
-                                controller: _nameController,
-                                label: 'Your Name:',
-                                text: true,
-                                maxlen: 15,
-                              ),
-                            ),
-                          ),
+                  Padding(
+                    padding: EdgeInsets.only(left: edge20, top: edge20),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: 0.6,
+                        child: TextNumberInput(
+                          error:
+                              _validateName ? null : 'Please enter your name.',
+                          controller: _nameController,
+                          label: 'Your Name:',
+                          text: true,
+                          maxlen: 15,
+                          onChanged: (String? newvalue) {
+                            setState(() {
+                              _validateName = true;
+                            });
+                          },
                         ),
-                        Padding(
-                          padding: EdgeInsets.only(left: edge20, top: edge20),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: FractionallySizedBox(
-                              widthFactor: 0.6,
-                              child: TextNumberInput(
-                                controller: _ageController,
-                                label: 'Age:',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                   Padding(
                     padding:
-                        EdgeInsets.only(top: edge20 * 2, bottom: edge20 * 3),
+                        EdgeInsets.only(top: edge20 * 3, bottom: edge20 * 3),
                     child: Text(
                       'Model Training preferences',
                       textScaleFactor: edge20 * 0.15,
                       style: const TextStyle(
                         fontFamily: 'moon',
-                        color: Colors.deepPurpleAccent,
+                        color: Colors.orange,
                       ),
                     ),
                   ),
@@ -173,6 +174,7 @@ class _AddImagePageState extends State<AddImagePage> {
                         });
                       },
                       spacing: 0,
+                      height: edge20 * 2,
                       width: edge20 * 7.5,
                       horizontal: false,
                       enableButtonWrap: true,
@@ -189,7 +191,12 @@ class _AddImagePageState extends State<AddImagePage> {
                         Expanded(
                           child: Column(
                             children: [
-                              const Text('Accuracy Threshold'),
+                              Text(
+                                'Accuracy Threshold',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: edge20 * 0.85),
+                              ),
                               Slider(
                                 inactiveColor: Colors.orange.shade100,
                                 activeColor: Colors.orange,
@@ -213,7 +220,10 @@ class _AddImagePageState extends State<AddImagePage> {
                         Expanded(
                           child: Column(
                             children: [
-                              const Text('Initial Dropout'),
+                              Text('Initial Dropout',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: edge20 * 0.85)),
                               Slider(
                                 inactiveColor: Colors.orange.shade100,
                                 activeColor: Colors.orange,
@@ -238,13 +248,16 @@ class _AddImagePageState extends State<AddImagePage> {
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.only(top: edge20 * 3),
+                    padding: EdgeInsets.only(top: edge20 * 2.5),
                     child: Row(
                       children: [
                         Expanded(
                           child: Column(
                             children: [
-                              const Text('KNN Neighbors'),
+                              Text('KNN Neighbors',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: edge20 * 0.85)),
                               Slider(
                                 inactiveColor: Colors.orange.shade100,
                                 activeColor: Colors.orange,
@@ -268,7 +281,10 @@ class _AddImagePageState extends State<AddImagePage> {
                         Expanded(
                           child: Column(
                             children: [
-                              const Text('Variable Dropout'),
+                              Text('Variable Dropout',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: edge20 * 0.85)),
                               Slider(
                                 activeColor: Colors.orange,
                                 inactiveColor: Colors.orange.shade100,
@@ -315,7 +331,7 @@ class _AddImagePageState extends State<AddImagePage> {
                       ? Colors.grey.withOpacity(0.5)
                       : Colors.grey.withOpacity(1),
                   image: DecorationImage(
-                      image: _imageFilesList.length == 0
+                      image: _imageNameList.isEmpty
                           ? const AssetImage(
                               'images/Drag_images_here_stripped.png')
                           : const AssetImage('images/empty.png'))),
@@ -331,7 +347,15 @@ class _AddImagePageState extends State<AddImagePage> {
                         onDragDone: (detail) {
                           setState(() {
                             _imageLoaded = false;
-                            _imageFilesList.addAll(detail.files);
+                            for (int i = 0; i < detail.files.length; i++) {
+                              _imageNameList.add(detail.files[i].name);
+                              _imagePathList.add(detail.files[i].path);
+                              _ageControllers.add(TextEditingController());
+                              _validateAge.add(true);
+                              _inputAgeList.add('0');
+                              _limitExceeded.add(false);
+                            }
+
                             getImageList('xfile', detail.files);
                             _imageLoaded = true;
                           });
@@ -350,7 +374,7 @@ class _AddImagePageState extends State<AddImagePage> {
                           itemExtent: edge20 * 10,
                           scrollDirection: Axis.vertical,
                           shrinkWrap: true,
-                          itemCount: _imageFilesList.length,
+                          itemCount: _imageNameList.length,
                           itemBuilder: (context, index) {
                             return Card(
                               elevation: 8.0,
@@ -359,10 +383,10 @@ class _AddImagePageState extends State<AddImagePage> {
                                   vertical: edge20 * 0.3),
                               child: Container(
                                 alignment: Alignment.center,
-                                decoration: const BoxDecoration(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(10)),
-                                    color: Color.fromRGBO(64, 75, 96, .9)),
+                                decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.all(
+                                        Radius.circular(10)),
+                                    color: Colors.grey[850]),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -426,7 +450,7 @@ class _AddImagePageState extends State<AddImagePage> {
                                                 padding: EdgeInsets.only(
                                                     left: edge20),
                                                 child: Text(
-                                                  '${_imageFilesList[index].name}',
+                                                  _imageNameList[index],
                                                   style: TextStyle(
                                                       color: Colors.white,
                                                       fontWeight:
@@ -470,9 +494,8 @@ class _AddImagePageState extends State<AddImagePage> {
                                                                   top: edge20 *
                                                                       0.2),
                                                           child: Text(
-                                                            _imageFilesList[
-                                                                    index]
-                                                                .path,
+                                                            _imagePathList[
+                                                                index],
                                                             style: TextStyle(
                                                                 color: Colors
                                                                     .white,
@@ -504,8 +527,24 @@ class _AddImagePageState extends State<AddImagePage> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.center,
                                             children: [
-                                              const Expanded(
+                                              Expanded(
                                                 child: TextNumberInput(
+                                                  error: _validateAge[index]
+                                                      ? _limitExceeded[index]
+                                                          ? 'Cannot have more than 6 \nimages with the same age.'
+                                                          : null
+                                                      : 'Please enter your age.',
+                                                  onChanged:
+                                                      (String? newvalue) {
+                                                    setState(() {
+                                                      _validateAge[index] =
+                                                          true;
+                                                      _limitExceeded[index] =
+                                                          false;
+                                                    });
+                                                  },
+                                                  controller:
+                                                      _ageControllers[index],
                                                   label: 'Age:',
                                                   allowDecimal: false,
                                                   text: false,
@@ -516,10 +555,83 @@ class _AddImagePageState extends State<AddImagePage> {
                                                 padding: EdgeInsets.only(
                                                     left: edge20 * 2),
                                                 child: IconButton(
-                                                  onPressed: () {},
+                                                  onPressed: () {
+                                                    String age =
+                                                        _ageControllers[index]
+                                                            .text;
+                                                    String name =
+                                                        _nameController.text;
+
+                                                    _inputAgeList[index] =
+                                                        '$name$age';
+
+                                                    if (name.isEmpty |
+                                                        age.isEmpty) {
+                                                      setState(() {
+                                                        if (name.isEmpty) {
+                                                          _validateName = false;
+                                                        }
+                                                        if (age.isEmpty) {
+                                                          _validateAge[index] =
+                                                              false;
+                                                        }
+                                                      });
+                                                    } else {
+                                                      setState(() {
+                                                        int numDuplicates =
+                                                            _inputAgeList
+                                                                .where((element) =>
+                                                                    element.contains(
+                                                                        name +
+                                                                            age))
+                                                                .length;
+                                                        if (numDuplicates >=
+                                                            2) {
+                                                          switch (
+                                                              numDuplicates) {
+                                                            case 2:
+                                                              int matchIndex =
+                                                                  _inputAgeList
+                                                                      .indexOf(
+                                                                          name +
+                                                                              age);
+                                                              _imageNameList[
+                                                                      matchIndex] =
+                                                                  '${_nameController.text}A${age}a.jpg';
+                                                              age = '${age}b';
+
+                                                              break;
+                                                            case 3:
+                                                              age = '${age}c';
+                                                              break;
+                                                            case 4:
+                                                              age = '${age}d';
+                                                              break;
+                                                            case 5:
+                                                              age = '${age}e';
+                                                              break;
+                                                            case 6:
+                                                              age = '${age}f';
+                                                              break;
+
+                                                            default:
+                                                              _limitExceeded[
+                                                                  index] = true;
+                                                              return;
+                                                          }
+                                                        }
+
+                                                        _validateName = true;
+                                                        _validateAge[index] =
+                                                            true;
+                                                        _imageNameList[index] =
+                                                            '${_nameController.text}A$age.jpg';
+                                                      });
+                                                    }
+                                                  },
                                                   icon: Icon(
                                                     Icons.check_box,
-                                                    color: Colors.green,
+                                                    color: Colors.white,
                                                     size: edge20 * 2,
                                                   ),
                                                 ),
@@ -581,7 +693,14 @@ class _AddImagePageState extends State<AddImagePage> {
                             List<PlatformFile> files = result.files;
 
                             setState(() {
-                              _imageFilesList.addAll(files);
+                              for (int i = 0; i < files.length; i++) {
+                                _imageNameList.add(files[i].name);
+                                _imagePathList.add(files[i].path!);
+                                _ageControllers.add(TextEditingController());
+                                _validateAge.add(true);
+                                _inputAgeList.add('0');
+                                _limitExceeded.add(false);
+                              }
                               getImageList('platformfile', files);
                             });
                           } else {
