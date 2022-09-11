@@ -15,3 +15,7 @@ saved_models/model586/KNN_model
 saved_models/
 *.txt
 *.log
+random.py
+asyTest.py
+test.xlsx
+cameraT.py
