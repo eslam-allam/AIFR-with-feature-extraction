@@ -32,3 +32,7 @@ client.iml
 client/README.md
 .idea
 .dart_tool
+test.xlsx
+asyTest.py
+cameraT.py
+random.py
