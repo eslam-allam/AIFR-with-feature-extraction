@@ -116,6 +116,7 @@ class modelTrainingClass:
         del base_model
 
         model.summary()
+
         model.compile(
             optimizer="adam",
             loss="categorical_crossentropy",
@@ -382,6 +383,53 @@ class modelTrainingClass:
         try:
             images_array[0] = temp_image
         except:
+            return -1
+
+        temp_image2 = images_array.astype("float32")
+        temp_image2 = utils.preprocess_input(temp_image2, version=2)
+
+        fc1 = m1.predict(temp_image2)
+        fc2 = m2.predict(temp_image2)
+        localPooling = pooling.predict(temp_image2)
+
+        fc1 = fc1.T
+        fc2 = fc2.T
+        localpooling = localPooling.T
+
+        testX = np.matmul(Ax1, fc1)
+        testY = np.matmul(Ay1, fc2)
+        test_vector1 = np.concatenate((testX, testY))
+
+        testX = np.matmul(Ax2, fc1)
+        testY = np.matmul(Ay2, localpooling)
+        test_vector2 = np.concatenate((testX, testY))
+
+        testX = np.matmul(Ax3, test_vector1)
+        testY = np.matmul(Ay3, test_vector2)
+        test_vector3 = np.concatenate((testX, testY))
+
+        test_vector = test_vector3.T
+
+        predicted = classifier.predict(test_vector)
+
+        # print("From model " + model)
+        print(predicted)
+        # self.showOneImgprediction(predicted, imgPath)
+        return predicted
+
+    def predictWMOdel3(self, imgItSelf):
+
+        images_array = np.ndarray((1, 224, 224, 3), dtype="int32")
+
+        # temp_image2 = imgItSelf
+        # print(type(imgItSelf))
+        # images_array[0] = imgItSelf
+
+        try:
+            imgItSelf = np.repeat(imgItSelf[..., np.newaxis], 3, -1)
+            images_array[0] = imgItSelf
+        except:
+            # print("WWWWWWWWWWWWWWWWWWWWWWWWW")
             return -1
 
         temp_image2 = images_array.astype("float32")

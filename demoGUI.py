@@ -939,7 +939,7 @@ class forthWindow(Screen):
         # opencv2 stuffs
         self.capture = cv2.VideoCapture(0)
         trainingClassInstance.loadLatest()
-        Clock.schedule_interval(self.update, 1.0 / 33.0)
+        Clock.schedule_interval(self.update2, 1.0 / 33.0)
         # Clock.schedule_interval(self.saperatePrediction, 1)
         # Clock.schedule_interval(self.threadTry, 5)
         self.add_widget(layout)
@@ -997,7 +997,7 @@ class forthWindow(Screen):
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
             if results.multi_face_landmarks:
-                processed_image = proccess_image(self.image_cap)
+                processed_image = proccess_image(self.image_cap)  ## remove from here
                 if not os.path.exists(PROCESSED_IMAGE_DIRECTORY):
                     os.mkdir(PROCESSED_IMAGE_DIRECTORY)
                 image_names = os.listdir(PROCESSED_IMAGE_DIRECTORY)
@@ -1016,9 +1016,80 @@ class forthWindow(Screen):
                     if processed_image is not None:
                         cv2.imwrite(path, processed_image)
                 except:
-                    print(processed_image)
+                    print(processed_image)  ### to here
                 # self.predictLive(path)
                 trainingClassInstance.predictWMOdel2(path)
+                # predict if there is detaction
+                # processed_image = proccess_image(self.image_cap)
+                for face_landmarks in results.multi_face_landmarks:
+
+                    mp_drawing.draw_landmarks(
+                        image=image,
+                        landmark_list=face_landmarks,
+                        connections=mp_face_mesh.FACEMESH_TESSELATION,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_tesselation_style(),
+                    )
+                    mp_drawing.draw_landmarks(
+                        image=image,
+                        landmark_list=face_landmarks,
+                        connections=mp_face_mesh.FACEMESH_CONTOURS,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_contours_style(),
+                    )
+                    mp_drawing.draw_landmarks(
+                        image=image,
+                        landmark_list=face_landmarks,
+                        connections=mp_face_mesh.FACEMESH_IRISES,
+                        landmark_drawing_spec=None,
+                        connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_iris_connections_style(),
+                    )
+
+        # convert it to texture
+        buf1 = cv2.flip(image, 0)
+        buf = buf1.tostring()
+        texture1 = Texture.create(size=(image.shape[1], image.shape[0]), colorfmt="bgr")
+        # if working on RASPBERRY PI, use colorfmt='rgba' here instead, but stick with "bgr" in blit_buffer.
+        texture1.blit_buffer(buf, colorfmt="bgr", bufferfmt="ubyte")
+        # display image from the texture
+        self.img1.texture = texture1
+
+        return image
+
+    def update2(self, dt):
+        # print("inside thread try")
+        # display image from cam in opencv window
+        success, image = self.capture.read()
+
+        with mp_face_mesh.FaceMesh(
+            max_num_faces=1,
+            refine_landmarks=True,
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5,
+        ) as face_mesh:
+
+            self.image_cap = image.copy()
+
+            # To improve performance, optionally mark the image as not writeable to
+            # pass by reference.
+            image.flags.writeable = False
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            results = face_mesh.process(image)
+            # if results.multi_face_landmarks:
+            #    print(type(self.image_cap))
+            # Draw the face mesh annotations on the image.
+            image.flags.writeable = True
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+            if results.multi_face_landmarks:
+                try:
+                    processed_image = proccess_image(
+                        self.image_cap
+                    )  ## remove from here
+
+                    trainingClassInstance.predictWMOdel3(processed_image)
+                except:
+                    print("exit")
                 # predict if there is detaction
                 # processed_image = proccess_image(self.image_cap)
                 for face_landmarks in results.multi_face_landmarks:
