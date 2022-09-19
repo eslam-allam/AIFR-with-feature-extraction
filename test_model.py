@@ -27,8 +27,9 @@ def unison_shuffled_copies(a, b):
     return a[p], b[p]
 
 
-with open('saved_models/model6_accuracy_86.07/compressed_models.pcl', 'rb') as f:
-    model, m1, m2, pooling, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
+with open('saved_models/model7_accuracy_89.55_enhanced/compressed_models.pcl', 'rb') as f:
+    model,Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
+
 
 image_directory = './datasets/FGNET/newImages/'
 image_list = os.listdir(image_directory)
@@ -49,11 +50,22 @@ images_array, labels = unison_shuffled_copies(images_array,labels)
 
 images_array2 = images_array.astype('float32')
 images_array2 = utils.preprocess_input(images_array2,version=2)
+#%%
+from tensorflow.keras import backend as K
 
-fc1 = m1.predict(images_array2)
+'''inp = model.input                                           # input placeholder
+outputs = [layer.output for layer in model.layers[-4:-1]]          # all layer outputs
+functor = tf.function([inp, K.learning_phase()], outputs )   # evaluation function
+
+fc1, fc2, pooling = functor(images_array2)'''
+
+'''fc1 = m1.predict(images_array2)
 fc2 = m2.predict(images_array2)
-pooling = pooling.predict(images_array2)
+pooling = pooling.predict(images_array2)'''
 
+
+
+fc1, fc2, pooling = model.predict(images_array2)
 fc1 = fc1.T
 fc2 = fc2.T
 pooling = pooling.T
@@ -77,8 +89,6 @@ test_vector = test_vector3.T
 predicted = classifier.predict(test_vector)
 
 # freeing memory
-tf.keras.backend.clear_session()
-del Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, test_vector1, test_vector2, test_vector3, classifier, m1, m2, pooling
 
 
 from sklearn import metrics
@@ -87,7 +97,7 @@ print("Accuracy:",metrics.accuracy_score(labels, predicted))
 
 
 #%%
-import math
+'''import math
 matching_images = []
 
 # make sure to replace images_array in the for loop with images_array[0:10] or any slice you want if you are using an interactive 
@@ -146,7 +156,7 @@ for i,image in enumerate(images_array):
     #mng.window.state('zoomed')
     plt.show()
 
-
+'''
 
 
 # %%
