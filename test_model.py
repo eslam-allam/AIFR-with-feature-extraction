@@ -27,7 +27,7 @@ def unison_shuffled_copies(a, b):
     return a[p], b[p]
 
 
-with open('saved_models/model7_accuracy_89.55_enhanced/compressed_models.pcl', 'rb') as f:
+with open('saved_models/model10_accuracy_87.06/compressed_models.pcl', 'rb') as f:
     model,Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
 
 

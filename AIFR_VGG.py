@@ -250,24 +250,18 @@ def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=Tru
         use_multiprocessing=True,
     )
 
+    model = Model(inputs=model.input, outputs=[model.get_layer('fc1').output, model.get_layer('fc2').output,model.get_layer('flatten').output])
+
+
     return model, history
 
-def three_layer_MDCA(x_train, x_test,y_train, model, layer1='fc1', layer2='fc2', layer3='flatten'):
+def three_layer_MDCA(x_train, x_test,y_train, model):
 
-    mylogs.info('EXTRACTING FC1 VECTOR')
-    m1 = Model(inputs=model.input, outputs=model.get_layer(layer1).output)
-    fc1_train = m1.predict(x_train)
-    fc1_test = m1.predict(x_test)
+    mylogs.info('EXTRACTING TRAINING SET FEATURE VECTORS')
+    fc1_train, fc2_train, flatten_train = model.predict(x_train)
 
-    mylogs.info('EXTRACTING FC2 VECTOR')
-    m2 = Model(inputs=model.input, outputs=model.get_layer(layer2).output)
-    fc2_train = m2.predict(x_train)
-    fc2_test = m2.predict(x_test)
-
-    mylogs.info('EXTRACTING FLATTEN VECTOR')
-    flatten = Model(inputs=model.input, outputs=model.get_layer(layer3).output)
-    flatten_train = flatten.predict(x_train)
-    flatten_test = flatten.predict(x_test)
+    mylogs.info('EXTRACTING TESTING SET FEATURE VECTORS')
+    fc1_test, fc2_test, flatten_test = model.predict(x_test)
 
     fc1_train = fc1_train.T
     fc2_train = fc2_train.T
@@ -307,7 +301,7 @@ def three_layer_MDCA(x_train, x_test,y_train, model, layer1='fc1', layer2='fc2',
     fused_vector = fused_vector3.T
     test_vector = test_vector3.T
 
-    return fused_vector, test_vector, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3
+    return fused_vector, test_vector, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3
 
 def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directory='./'):
     
@@ -357,7 +351,7 @@ def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directo
     mylogs.info(f"EXPORTING EXCEL FILE TO {output_directory+'/Model_accuracy_stats.xlsx'}")
     writer.save()
 
-def save_model(model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accuracy,save_directory=MODEL_SAVE_DIRECTORY, model_name=None, save_excel_stats=False, y_test_ages=None, predicted=None, history=None, y_test=None):
+def save_model(model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accuracy,save_directory=MODEL_SAVE_DIRECTORY, model_name=None, save_excel_stats=False, y_test_ages=None, predicted=None, history=None, y_test=None):
 
     if not model_name: 
         last_model_num = int(sorted(os.listdir(save_directory))[-1].split('_')[0][5])+1
@@ -365,7 +359,7 @@ def save_model(model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier,
 
     model_location = save_directory+model_name
     os.makedirs(model_location,exist_ok=False)
-    models = [model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier]
+    models = [model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier]
 
     mylogs.info(f"EXPORTING MODELS TO {model_location+'/compressed_models.pcl'}")
     with open(model_location+'/compressed_models.pcl', "wb") as f:
@@ -451,16 +445,14 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
             model = load_model(model_name=model_name)
             model, history = build_model(x_train, y_train_categorical, early_stop=False, model_summary=model_summary, num_classes=num_classes, drop_out=drop_out, from_model=True, model=model, epochs=10, variable_lr=False)
 
-        fused_vector, test_vector, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(x_train, x_test,y_train, model)
+        fused_vector, test_vector, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(x_train, x_test,y_train, model)
         
         for i in range(KNN_neighbors,KNN_neighbors+10):
-            mylogs.info(f'NUMBER OF kNN NEIGHBORS = {KNN_neighbors}')
+            mylogs.info(f'NUMBER OF kNN NEIGHBORS = {i}')
             classifier = KNeighborsClassifier(n_neighbors=i)
             classifier.fit(fused_vector, y_train)
 
             # predict and display using DNN and KNN classifiers
-            predicted = np.argmax(model.predict(x_test), axis=-1)
-            mylogs.info("DNN Accuracy: {}".format(metrics.accuracy_score(y_test, predicted)))
 
             predicted = classifier.predict(test_vector)
             mylogs.info("DCA Accuracy: {}".format(metrics.accuracy_score(y_test, predicted)))
@@ -468,9 +460,9 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
             DCA_accuracy = metrics.accuracy_score(y_test, predicted)
 
             if accuracy_threshold == 0.0:
-                return model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory
+                return model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory
             if DCA_accuracy >= accuracy_threshold:
-                model_name = save_model(model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy,
+                model_name = save_model(model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy,
                 save_excel_stats=save_excel_stats, y_test_ages=y_test_ages, predicted=predicted, history=history, y_test=y_test, save_directory=save_directory)
                 return model_name, DCA_accuracy
             
@@ -479,7 +471,7 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
 
         tf.keras.backend.set_learning_phase(1)
         tf.keras.backend.clear_session()
-        del model, history, fused_vector, test_vector, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3
+        del model, history, fused_vector, test_vector, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3
         classifier, predicted
         if not loop: break
         elif variable_dropout is not None and variable_dropout != 0.0: 
