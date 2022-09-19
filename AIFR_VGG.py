@@ -1,19 +1,104 @@
 import argparse
 
-parser = argparse.ArgumentParser(description='Train and save a DNN-MDCA model using a dataset from directory. The input images must have a shape of (224, 224, 3) and prefereably preprocessed adequatily.')
-parser.add_argument('-l','--loop', required=False, action='store_true', help='loop program until desired accuracy is reached')
-parser.add_argument('-es','--early-stop', required=False, action='store_true', help='stop the training early if the accuracy is not improving')
-parser.add_argument('-ne','--no-excel', required=False, action='store_true', help="don't save stats to excel files")
-parser.add_argument('-st','--shutdown', required=False, action='store_true', help="shutdown computer after program is done. Currently only works on systemctl OS such as ubuntu.")
-parser.add_argument('-v','--variable-dropout', required=False, type=float, action='store', help="increase dropout after every iteration")
-parser.add_argument('-d','--dropout', required=False, type=float, action='store', help="Set dropout value")
-parser.add_argument('-s','--model-summary', required=False, action='store_true', help="Print summary of built TF model")
-parser.add_argument('-vk','--variable-knn', required=False, action='store_true', help="keep changing number of KNN neighbors until target accuracy is reached.")
-parser.add_argument('-bc','--bot-config', metavar='\b', required=False, help="Modify bot configuration file location.")
-parser.add_argument('-nt','--notify-telegram', required=False, action='store_true', help="send telegram notification when training is finished")
-parser.add_argument('-kn','--knn-neighbors', metavar='\b', required=False, type=int, help='number of KNN neighbors')
-parser.add_argument('-sd','--save-directory', metavar='\b', required=False, type=str, help='Directory to save models')
-parser.add_argument('-at','--accuracy-threshold', metavar='\b', required=False, type=float, help='Min accuracy to stop the loop')
+parser = argparse.ArgumentParser(
+    description="Train and save a DNN-MDCA model using a dataset from directory. The input images must have a shape of (224, 224, 3) and prefereably preprocessed adequatily."
+)
+parser.add_argument(
+    "-l",
+    "--loop",
+    required=False,
+    action="store_true",
+    help="loop program until desired accuracy is reached",
+)
+parser.add_argument(
+    "-es",
+    "--early-stop",
+    required=False,
+    action="store_true",
+    help="stop the training early if the accuracy is not improving",
+)
+parser.add_argument(
+    "-ne",
+    "--no-excel",
+    required=False,
+    action="store_true",
+    help="don't save stats to excel files",
+)
+parser.add_argument(
+    "-st",
+    "--shutdown",
+    required=False,
+    action="store_true",
+    help="shutdown computer after program is done. Currently only works on systemctl OS such as ubuntu.",
+)
+parser.add_argument(
+    "-v",
+    "--variable-dropout",
+    required=False,
+    type=float,
+    action="store",
+    help="increase dropout after every iteration",
+)
+parser.add_argument(
+    "-d",
+    "--dropout",
+    required=False,
+    type=float,
+    action="store",
+    help="Set dropout value",
+)
+parser.add_argument(
+    "-s",
+    "--model-summary",
+    required=False,
+    action="store_true",
+    help="Print summary of built TF model",
+)
+parser.add_argument(
+    "-vk",
+    "--variable-knn",
+    required=False,
+    action="store_true",
+    help="keep changing number of KNN neighbors until target accuracy is reached.",
+)
+parser.add_argument(
+    "-bc",
+    "--bot-config",
+    metavar="\b",
+    required=False,
+    help="Modify bot configuration file location.",
+)
+parser.add_argument(
+    "-nt",
+    "--notify-telegram",
+    required=False,
+    action="store_true",
+    help="send telegram notification when training is finished",
+)
+parser.add_argument(
+    "-kn",
+    "--knn-neighbors",
+    metavar="\b",
+    required=False,
+    type=int,
+    help="number of KNN neighbors",
+)
+parser.add_argument(
+    "-sd",
+    "--save-directory",
+    metavar="\b",
+    required=False,
+    type=str,
+    help="Directory to save models",
+)
+parser.add_argument(
+    "-at",
+    "--accuracy-threshold",
+    metavar="\b",
+    required=False,
+    type=float,
+    help="Min accuracy to stop the loop",
+)
 args = parser.parse_args()
 
 import tensorflow as tf
@@ -32,7 +117,7 @@ from tensorflow.keras import regularizers
 from tensorflow.keras.callbacks import LearningRateScheduler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn import metrics
-import pickle 
+import pickle
 import logging
 import requests
 import sys
@@ -47,32 +132,43 @@ tf.get_logger().setLevel(logging.CRITICAL)
 mylogs = logging.getLogger(__name__)
 mylogs.setLevel(logging.DEBUG)
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 stream = logging.StreamHandler()
 stream.setLevel(logging.DEBUG)
-streamformat = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
+streamformat = logging.Formatter(
+    "%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
 stream.setFormatter(streamformat)
 
-file = logging.FileHandler("program_logs.log",encoding='utf-8')
+file = logging.FileHandler("program_logs.log", encoding="utf-8")
 file.setLevel(logging.INFO)
-fileformat = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
+fileformat = logging.Formatter(
+    "%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
 file.setFormatter(fileformat)
 
 mylogs.addHandler(stream)
 mylogs.addHandler(file)
 
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
-        mylogs.info('KEYBOARD INTERRUPT, PROGRAM TERMINATED')
-        
+        mylogs.info("KEYBOARD INTERRUPT, PROGRAM TERMINATED")
+
     else:
-        mylogs.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-        if args.notify_telegram: notify_telegram(config_from_file=True, message=f'Model training experienced a critical error and was terninated.\nError info:\nException type: {exc_type}\nException value: {exc_value}\nTraceback: {exc_traceback}')
-        if args.shutdown: subprocess.call(['systemctl', 'poweroff'])
+        mylogs.critical(
+            "Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback)
+        )
+        if args.notify_telegram:
+            notify_telegram(
+                config_from_file=True,
+                message=f"Model training experienced a critical error and was terninated.\nError info:\nException type: {exc_type}\nException value: {exc_value}\nTraceback: {exc_traceback}",
+            )
+        if args.shutdown:
+            subprocess.call(["systemctl", "poweroff"])
     sys.exit(0)
 
-    
 
 sys.excepthook = handle_exception
 sys.setrecursionlimit(10000)
@@ -80,12 +176,11 @@ sys.setrecursionlimit(10000)
 
 DATASET_DIRECTORY = "./datasets/FGNET/newImages/"
 IMAGE_SHAPE = (224, 224, 3)
-MODEL_SAVE_DIRECTORY = './saved_models/'
+MODEL_SAVE_DIRECTORY = "./saved_models/"
 SAVE_MODEL_ACCURACY_THRESHOLD = 0.86
-BOT_CONFIG_PATH = './bot_config.txt'
+BOT_CONFIG_PATH = "./bot_config.txt"
 EPOCHS = 150
 DROPOUT = 0.2
-
 
 
 def lr_schedule(epoch):
@@ -102,90 +197,124 @@ def lr_schedule(epoch):
         lrate = 0.00001
     return lrate
 
+
 def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
     image_list = os.listdir(directory)
 
     number_of_images = len(image_list)
     data_shape = (number_of_images,) + image_shape
-    mylogs.debug(f'NUMBER OF IMAGES: {len(image_list)}')
+    mylogs.debug(f"NUMBER OF IMAGES: {len(image_list)}")
 
-    images_array = np.ndarray(
-        data_shape, dtype="int32"
-    )  
-    labels = np.empty(number_of_images, dtype=int) 
+    images_array = np.ndarray(data_shape, dtype="int32")
+    labels = np.empty(number_of_images, dtype=int)
     ages = np.empty(number_of_images, dtype=int)
     # fill image and label arrays
 
-    mylogs.info('LOADING DATASET')
+    mylogs.info("LOADING DATASET")
     for i, image in enumerate(meter(image_list)):
         temp_image = cv2.imread(directory + image)
         images_array[i] = temp_image
-        label = image.split('.')[0].split('A')
-        label[1] = re.sub(r'[aA-zZ]+', '', label[1])
-        label = label[0].split('-') + [label[1]]
+        label = image.split(".")[0].split("A")
+        label[1] = re.sub(r"[aA-zZ]+", "", label[1])
+        label = label[0].split("-") + [label[1]]
         if len(label) == 3:
-             label, name , age = int(label[0]) - 1,label[1] , label[2]
-             
-        else: label, age = int(label[0]) -1 , label[1]
+            label, name, age = int(label[0]) - 1, label[1], label[2]
 
-       
-        ages[i] = int(re.sub(r'[aA-zZ]+', '', age ))
+        else:
+            label, age = int(label[0]) - 1, label[1]
+
+        ages[i] = int(re.sub(r"[aA-zZ]+", "", age))
         labels[i] = label
-    
+
     num_classes = len(np.unique(labels))
-    mylogs.debug(f'NUMBER OF CLASSES: {num_classes}')
-    
-    seed = random.randint(0, 2**32 - 1)
+    mylogs.debug(f"NUMBER OF CLASSES: {num_classes}")
+
+    seed = random.randint(0, 2 ** 32 - 1)
 
     # split the data into train and test
     x_train, x_test, y_train, y_test = train_test_split(
         images_array, labels, test_size=0.20, random_state=seed
     )
-    y_train_ages, y_test_ages = train_test_split(ages, test_size=0.20, random_state=seed)
-    
+    y_train_ages, y_test_ages = train_test_split(
+        ages, test_size=0.20, random_state=seed
+    )
 
     y_test = np.array(y_test)
     labels = np.array(labels)
-    
+
     y_train_categorical = tf.keras.utils.to_categorical(
         y_train, num_classes=num_classes, dtype="float32"
     )
-    
+
     x_train = x_train.astype("float32")
     x_test = x_test.astype("float32")
 
     x_train = utils.preprocess_input(x_train, version=2)
     x_test = utils.preprocess_input(x_test, version=2)
-    
-    return x_train, y_train, x_test, y_test, y_train_categorical, y_test_ages, num_classes
 
-def load_model(directory=MODEL_SAVE_DIRECTORY, model_name=''):
-    
+    return (
+        x_train,
+        y_train,
+        x_test,
+        y_test,
+        y_train_categorical,
+        y_test_ages,
+        num_classes,
+    )
+
+
+def load_model(directory=MODEL_SAVE_DIRECTORY, model_name=""):
 
     if not model_name:
         model_name = sorted(os.listdir(directory))[-1]
-    
-    mylogs.info(f'LOADING MODEL {model_name} FROM "{directory+model_name+"/compressed_models.pcl"}"')
+
+    mylogs.info(
+        f'LOADING MODEL {model_name} FROM "{directory+model_name+"/compressed_models.pcl"}"'
+    )
 
     try:
-        with open(directory+model_name+'/compressed_models.pcl', 'rb') as f:
-            model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
-        
-        mylogs.info(f'MODEL LOADED SUCCESFULLY')
+        with open(directory + model_name + "/compressed_models.pcl", "rb") as f:
+            (
+                model,
+                m1,
+                m2,
+                flatten,
+                Ax1,
+                Ax2,
+                Ax3,
+                Ay1,
+                Ay2,
+                Ay3,
+                classifier,
+            ) = pickle.load(f)
+
+        mylogs.info(f"MODEL LOADED SUCCESFULLY")
         return model
     except:
-        mylogs.error('UNABLE TO LOAD MODEL.')
+        mylogs.error("UNABLE TO LOAD MODEL.")
 
-def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=True, batch_size=128, model_summary=False, num_classes=82, drop_out= DROPOUT, from_model=False, model=None):
+
+def build_model(
+    x_train,
+    y_train,
+    epochs=EPOCHS,
+    early_stop=True,
+    variable_lr=True,
+    batch_size=128,
+    model_summary=False,
+    num_classes=82,
+    drop_out=DROPOUT,
+    from_model=False,
+    model=None,
+):
 
     if not from_model:
-        mylogs.info('CREATING MODEL')
+        mylogs.info("CREATING MODEL")
 
         base_model = VGGFace(
             model="senet50", include_top=True, input_shape=(224, 224, 3), pooling="avg"
         )
         base_model.trainable = False  ## Not trainable weights
-
 
         x = base_model.layers[-2].output
         dense1 = Dense(
@@ -202,24 +331,24 @@ def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=Tru
             kernel_regularizer=regularizers.l1_l2(l1=1e-5, l2=1e-4),
         )(drop1)
         drop = Dropout(drop_out)(dense2)
-        predictions = Dense(num_classes, activation="softmax")(drop)  
+        predictions = Dense(num_classes, activation="softmax")(drop)
         model = Model(inputs=base_model.input, outputs=predictions)
     else:
         x = model.layers[-2].output
         predictions = Dense(num_classes, activation="softmax")(x)
         model = Model(inputs=model.input, outputs=predictions)
 
-    
-    if model_summary: 
+    if model_summary:
         summary_lines = []
         model.summary(print_fn=lambda x: summary_lines.append(x))
-        summary_lines = '\n'.join(summary_lines)
-        mylogs.info(f'MODEL SUMMARY:\n{summary_lines}')
+        summary_lines = "\n".join(summary_lines)
+        mylogs.info(f"MODEL SUMMARY:\n{summary_lines}")
 
-    
-    mylogs.info('COMPILING MODEL')
-    if from_model: learning_rate = 0.00005
-    else: learning_rate = 0.001
+    mylogs.info("COMPILING MODEL")
+    if from_model:
+        learning_rate = 0.00005
+    else:
+        learning_rate = 0.001
     opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(
         optimizer=opt,
@@ -227,9 +356,8 @@ def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=Tru
         metrics=["accuracy"],
     )
 
-    
     es = EarlyStopping(
-    monitor="val_accuracy", mode="max", patience=15, restore_best_weights=True
+        monitor="val_accuracy", mode="max", patience=15, restore_best_weights=True
     )
 
     callbacks = []
@@ -238,8 +366,7 @@ def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=Tru
     if variable_lr:
         callbacks.append(LearningRateScheduler(lr_schedule))
 
-
-    mylogs.info('TRAINING MODEL')
+    mylogs.info("TRAINING MODEL")
     history = model.fit(
         x_train,
         y_train,
@@ -250,17 +377,24 @@ def build_model(x_train, y_train,epochs=EPOCHS, early_stop=True, variable_lr=Tru
         use_multiprocessing=True,
     )
 
-    model = Model(inputs=model.input, outputs=[model.get_layer('fc1').output, model.get_layer('fc2').output,model.get_layer('flatten').output])
-
+    model = Model(
+        inputs=model.input,
+        outputs=[
+            model.get_layer("fc1").output,
+            model.get_layer("fc2").output,
+            model.get_layer("flatten").output,
+        ],
+    )
 
     return model, history
 
-def three_layer_MDCA(x_train, x_test,y_train, model):
 
-    mylogs.info('EXTRACTING TRAINING SET FEATURE VECTORS')
+def three_layer_MDCA(x_train, x_test, y_train, model):
+
+    mylogs.info("EXTRACTING TRAINING SET FEATURE VECTORS")
     fc1_train, fc2_train, flatten_train = model.predict(x_train)
 
-    mylogs.info('EXTRACTING TESTING SET FEATURE VECTORS')
+    mylogs.info("EXTRACTING TESTING SET FEATURE VECTORS")
     fc1_test, fc2_test, flatten_test = model.predict(x_test)
 
     fc1_train = fc1_train.T
@@ -272,16 +406,15 @@ def three_layer_MDCA(x_train, x_test,y_train, model):
     flatten_train = flatten_train.T
     flatten_test = flatten_test.T
 
-    mylogs.info('STAGE 1 FUSION')
+    mylogs.info("STAGE 1 FUSION")
     Xs, Ys, Ax1, Ay1 = dcaFuse(fc1_train, fc2_train, y_train)
     fused_vector1 = np.concatenate((Xs, Ys))
 
-    
     testX = np.matmul(Ax1, fc1_test)
     testY = np.matmul(Ay1, fc2_test)
     test_vector1 = np.concatenate((testX, testY))
 
-    mylogs.info('STAGE 2 FUSION')
+    mylogs.info("STAGE 2 FUSION")
     Xs, Ys, Ax2, Ay2 = dcaFuse(fc1_train, flatten_train, y_train)
     fused_vector2 = np.concatenate((Xs, Ys))
 
@@ -289,7 +422,7 @@ def three_layer_MDCA(x_train, x_test,y_train, model):
     testY = np.matmul(Ay2, flatten_test)
     test_vector2 = np.concatenate((testX, testY))
 
-    mylogs.info('STAGE 3 FUSION')
+    mylogs.info("STAGE 3 FUSION")
     Xs, Ys, Ax3, Ay3 = dcaFuse(fused_vector1, fused_vector2, y_train)
     fused_vector3 = np.concatenate((Xs, Ys))
 
@@ -297,25 +430,27 @@ def three_layer_MDCA(x_train, x_test,y_train, model):
     testY = np.matmul(Ay3, test_vector2)
     test_vector3 = np.concatenate((testX, testY))
 
-
     fused_vector = fused_vector3.T
     test_vector = test_vector3.T
 
     return fused_vector, test_vector, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3
 
-def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directory='./'):
-    
-    if not os.path.exists(output_directory): os.mkdir(output_directory)
-        
-    age_based_tally = dict.fromkeys(np.unique(y_test_ages),[0,0])
-    age_based_tally = pd.DataFrame(data = age_based_tally)
-    age_based_tally.index = ['correct','incorrect']
+
+def model_stats_to_excel(
+    y_test_ages, predicted, history, y_test, output_directory="./"
+):
+
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory)
+
+    age_based_tally = dict.fromkeys(np.unique(y_test_ages), [0, 0])
+    age_based_tally = pd.DataFrame(data=age_based_tally)
+    age_based_tally.index = ["correct", "incorrect"]
 
     total_correct = 0
     total_wrong = 0
 
-
-    for i in range(0,len(y_test)):
+    for i in range(0, len(y_test)):
         if y_test[i] == predicted[i]:
             age_based_tally[y_test_ages[i]][0] += 1
             total_correct += 1
@@ -323,105 +458,227 @@ def model_stats_to_excel(y_test_ages, predicted, history, y_test, output_directo
             age_based_tally[y_test_ages[i]][1] += 1
             total_wrong += 1
 
-
     age_based_tally = age_based_tally.T
-    
 
-    accuracy_history = history.history['accuracy']
-    val_accuraccy_history = history.history['val_accuracy']
+    accuracy_history = history.history["accuracy"]
+    val_accuraccy_history = history.history["val_accuracy"]
 
-    accuracy_df = pd.DataFrame(data=(accuracy_history,val_accuraccy_history))
-    accuracy_df.index = ['accuracy','val accuracy']
+    accuracy_df = pd.DataFrame(data=(accuracy_history, val_accuraccy_history))
+    accuracy_df.index = ["accuracy", "val accuracy"]
 
     # summarize history for loss
-    loss_history = history.history['loss']
-    val_loss_history = history.history['val_loss']
+    loss_history = history.history["loss"]
+    val_loss_history = history.history["val_loss"]
 
-    loss_df = pd.DataFrame(data=(loss_history,val_loss_history))
-    loss_df.index = ['loss','val loss']
+    loss_df = pd.DataFrame(data=(loss_history, val_loss_history))
+    loss_df.index = ["loss", "val loss"]
 
     accuracy_df = accuracy_df.T
     loss_df = loss_df.T
 
-    writer = pd.ExcelWriter(output_directory+'/Model_accuracy_stats.xlsx', engine='xlsxwriter')
-    age_based_tally.to_excel(writer, sheet_name='Age_based_tally')
-    accuracy_df.to_excel(writer, sheet_name='Model_Accuracy')
-    loss_df.to_excel(writer, sheet_name='Model_Loss')
+    writer = pd.ExcelWriter(
+        output_directory + "/Model_accuracy_stats.xlsx", engine="xlsxwriter"
+    )
+    age_based_tally.to_excel(writer, sheet_name="Age_based_tally")
+    accuracy_df.to_excel(writer, sheet_name="Model_Accuracy")
+    loss_df.to_excel(writer, sheet_name="Model_Loss")
 
-    mylogs.info(f"EXPORTING EXCEL FILE TO {output_directory+'/Model_accuracy_stats.xlsx'}")
+    mylogs.info(
+        f"EXPORTING EXCEL FILE TO {output_directory+'/Model_accuracy_stats.xlsx'}"
+    )
     writer.save()
 
-def save_model(model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accuracy,save_directory=MODEL_SAVE_DIRECTORY, model_name=None, save_excel_stats=False, y_test_ages=None, predicted=None, history=None, y_test=None):
 
-    if not model_name: 
-        last_model_num = int(sorted(os.listdir(save_directory))[-1].split('_')[0][5])+1
-        model_name = f'model{last_model_num}_accuracy_{accuracy*100:.2f}'
+def save_model(
+    model,
+    Ax1,
+    Ax2,
+    Ax3,
+    Ay1,
+    Ay2,
+    Ay3,
+    classifier,
+    accuracy,
+    save_directory=MODEL_SAVE_DIRECTORY,
+    model_name=None,
+    save_excel_stats=False,
+    y_test_ages=None,
+    predicted=None,
+    history=None,
+    y_test=None,
+):
 
-    model_location = save_directory+model_name
-    os.makedirs(model_location,exist_ok=False)
+    if not model_name:
+        last_model_num = (
+            int(sorted(os.listdir(save_directory))[-1].split("_")[0][5]) + 1
+        )
+        model_name = f"model{last_model_num}_accuracy_{accuracy*100:.2f}"
+
+    model_location = save_directory + model_name
+    os.makedirs(model_location, exist_ok=False)
     models = [model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier]
 
     mylogs.info(f"EXPORTING MODELS TO {model_location+'/compressed_models.pcl'}")
-    with open(model_location+'/compressed_models.pcl', "wb") as f:
+    with open(model_location + "/compressed_models.pcl", "wb") as f:
         pickle.dump(models, f)
 
     if save_excel_stats:
-        assert y_test_ages is not None and predicted is not None and history is not None and y_test is not None, 'y_test_ages, predicted, history, y_test are required to generate model stats'
+        assert (
+            y_test_ages is not None
+            and predicted is not None
+            and history is not None
+            and y_test is not None
+        ), "y_test_ages, predicted, history, y_test are required to generate model stats"
         model_stats_to_excel(y_test_ages, predicted, history, y_test, model_location)
-    
-    if model_name: return model_name
-    else: return 'UnnamedModel'
-    
-def  notify_telegram(model_name=None, accuracy=None, telegram_bot_token=None, telegram_chatID=None, bot_config_file=BOT_CONFIG_PATH, init=False, config_from_file=False, message=''):
+
+    if model_name:
+        return model_name
+    else:
+        return "UnnamedModel"
+
+
+def notify_telegram(
+    model_name=None,
+    accuracy=None,
+    telegram_bot_token=None,
+    telegram_chatID=None,
+    bot_config_file=BOT_CONFIG_PATH,
+    init=False,
+    config_from_file=False,
+    message="",
+):
 
     if init or config_from_file:
         if os.path.exists(bot_config_file):
             try:
-                with open(bot_config_file,'r', encoding='utf-8') as f:
+                with open(bot_config_file, "r", encoding="utf-8") as f:
                     lines = f.readlines()
             except FileNotFoundError:
-                mylogs.error('COULD NOT LOCATE SETUP FILE')
+                mylogs.error("COULD NOT LOCATE SETUP FILE")
                 sys.exit(0)
 
-
-            telegram_bot_token = lines[0][lines[0].find('=')+1:].strip()
-            telegram_chatID = lines[1][lines[1].find('=')+1:].strip()
+            telegram_bot_token = lines[0][lines[0].find("=") + 1 :].strip()
+            telegram_chatID = lines[1][lines[1].find("=") + 1 :].strip()
         else:
-            mylogs.warning('SETUP FILE DOES NOT EXIST! CREATING SETUP FILE')
+            mylogs.warning("SETUP FILE DOES NOT EXIST! CREATING SETUP FILE")
             if not telegram_bot_token or not telegram_chatID:
-                mylogs.warning('SOME CORE VALUES NOT PROVIDED. ATTEMPTING MANUAL RETRIEVAL')
-            telegram_bot_token = input('ENTER YOUR TELEGRAM BOT TOKEN: ')
-            telegram_chatID = input('ENTER YOUR TELEGRAM CHAT ID: ')
+                mylogs.warning(
+                    "SOME CORE VALUES NOT PROVIDED. ATTEMPTING MANUAL RETRIEVAL"
+                )
+            telegram_bot_token = input("ENTER YOUR TELEGRAM BOT TOKEN: ")
+            telegram_chatID = input("ENTER YOUR TELEGRAM CHAT ID: ")
 
-            setup_text = 'telegram_bot_token = {}\ntelegram_chatID = {}'.format(telegram_bot_token, telegram_chatID)
-            mylogs.info('CREATING SETUP FILE')
-            with open(bot_config_file,'w', encoding='utf-8') as f:
-                    f.write(setup_text)
-            
-            mylogs.info('SETUP FILE CREATED SUCCESSFULLY') 
-            
-    if init: return  telegram_bot_token, telegram_chatID
+            setup_text = "telegram_bot_token = {}\ntelegram_chatID = {}".format(
+                telegram_bot_token, telegram_chatID
+            )
+            mylogs.info("CREATING SETUP FILE")
+            with open(bot_config_file, "w", encoding="utf-8") as f:
+                f.write(setup_text)
 
-    
-    if not message: 
-        assert model_name and accuracy, f"INVALID VALUES FOR MODEL_NAME, ACCURACY '{model_name}', '{accuracy}'"
+            mylogs.info("SETUP FILE CREATED SUCCESSFULLY")
+
+    if init:
+        return telegram_bot_token, telegram_chatID
+
+    if not message:
+        assert (
+            model_name and accuracy
+        ), f"INVALID VALUES FOR MODEL_NAME, ACCURACY '{model_name}', '{accuracy}'"
         message = f'Your model "{model_name}" has finished training with an accracy of: {accuracy*100:.2f}%'
-    response = requests.get('https://api.telegram.org/bot{}/sendMessage'.format(telegram_bot_token),params={'text':message ,'chat_id': '{}'.format(telegram_chatID)})
+    response = requests.get(
+        "https://api.telegram.org/bot{}/sendMessage".format(telegram_bot_token),
+        params={"text": message, "chat_id": "{}".format(telegram_chatID)},
+    )
     status = response.json()
-    if status['ok']:
-        mylogs.info('**********************STATUS:OK**********************')
-        sender = status['result']['from']
-        chat = status['result']['chat']
-        mylogs.info('MESSAGE SENT THROUGH {} TO {} {}'.format(sender['first_name'],chat['first_name'], chat['last_name']))
-        if model_name: mylogs.info('MESSAGE: {}'.format(f'Your model "{model_name}" has finished training with an accracy of: {accuracy*100:.2f}%'))
+    if status["ok"]:
+        mylogs.info("**********************STATUS:OK**********************")
+        sender = status["result"]["from"]
+        chat = status["result"]["chat"]
+        mylogs.info(
+            "MESSAGE SENT THROUGH {} TO {} {}".format(
+                sender["first_name"], chat["first_name"], chat["last_name"]
+            )
+        )
+        if model_name:
+            mylogs.info(
+                "MESSAGE: {}".format(
+                    f'Your model "{model_name}" has finished training with an accracy of: {accuracy*100:.2f}%'
+                )
+            )
     else:
-        mylogs.warning('**********************STATUS:NO OK**********************')
-        mylogs.warning('MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID')
+        mylogs.warning("**********************STATUS:NO OK**********************")
+        mylogs.warning("MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID")
 
-def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, save_directory=MODEL_SAVE_DIRECTORY, accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD, model_summary=False, drop_out=DROPOUT, variable_dropout=None, variable_knn=False, from_model = False, model_name=''):
-    
+
+def predict(imgItSelf, model, Ax1, Ay1, Ax2, Ay2, Ax3, Ay3, classifier):
+
+    images_array = np.ndarray((1, 224, 224, 3), dtype="int32")
+
+    # temp_image2 = imgItSelf
+    # print(type(imgItSelf))
+    # images_array[0] = imgItSelf
+
+    try:
+        imgItSelf = np.repeat(imgItSelf[..., np.newaxis], 3, -1)
+        images_array[0] = imgItSelf
+    except:
+        print("issue with image shape")
+        return -1
+
+    temp_image2 = images_array.astype("float32")
+    temp_image2 = utils.preprocess_input(temp_image2, version=2)
+
+    """fc1 = m1.predict(temp_image2)
+    fc2 = m2.predict(temp_image2)
+    localPooling = pooling.predict(temp_image2)"""
+    fc1, fc2, pooling = model.predict(temp_image2)
+    fc1 = fc1.T
+    fc2 = fc2.T
+    pooling = pooling.T
+
+    testX = np.matmul(Ax1, fc1)
+    testY = np.matmul(Ay1, fc2)
+    test_vector1 = np.concatenate((testX, testY))
+
+    testX = np.matmul(Ax2, fc1)
+    testY = np.matmul(Ay2, pooling)
+    test_vector2 = np.concatenate((testX, testY))
+
+    testX = np.matmul(Ax3, test_vector1)
+    testY = np.matmul(Ay3, test_vector2)
+    test_vector3 = np.concatenate((testX, testY))
+
+    test_vector = test_vector3.T
+
+    predicted = classifier.predict(test_vector)
+
+    # print("From model " + model)
+    print(predicted)
+    # self.showOneImgprediction(predicted, imgPath)
+    return predicted
+
+
+# m1, m2, pooling, Ax1, Ay1, Ax2, Ay2, Ax3, Ay3
+
+
+def main(
+    loop=False,
+    early_stop=False,
+    save_excel_stats=True,
+    KNN_neighbors=5,
+    save_directory=MODEL_SAVE_DIRECTORY,
+    accuracy_threshold=SAVE_MODEL_ACCURACY_THRESHOLD,
+    model_summary=False,
+    drop_out=DROPOUT,
+    variable_dropout=None,
+    variable_knn=False,
+    from_model=False,
+    model_name="",
+):
+
     if not from_model:
-        mylogs.info(f'''STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
+        mylogs.info(
+            f"""STARTING TRAINING WITH THE FOLLOWING CONFIGURATION:
                                     LOOP = {loop}, EARLY_STOP = {early_stop}, SAVE_EXCEL_STATS = {save_excel_stats}, MODEL_SUMMARY = {model_summary}
                                     NUMBER_OF_KNN_NEIGHBOURS = {KNN_neighbors}
                                     ACCURACY_THRESHOLD = {accuracy_threshold}
@@ -431,61 +688,146 @@ def main(loop=False ,early_stop=False, save_excel_stats=True,KNN_neighbors=5, sa
                                     VARIABLE_KNN_NEIGHBORS = {variable_knn}
                                     SAVE_DIRECTORY = {save_directory}
                                     SYSTEM_SHUTDOWN = {args.shutdown}
-        ------------------------------------------------------------------------------------------------------------------------------------------------''')
-        
-    
-    
-    x_train, y_train, x_test, y_test, y_train_categorical, y_test_ages, num_classes = load_dataset()
+        ------------------------------------------------------------------------------------------------------------------------------------------------"""
+        )
+
+    (
+        x_train,
+        y_train,
+        x_test,
+        y_test,
+        y_train_categorical,
+        y_test_ages,
+        num_classes,
+    ) = load_dataset()
 
     while True:
 
         if not from_model:
-            model, history = build_model(x_train, y_train_categorical, early_stop=early_stop, model_summary=model_summary, num_classes=num_classes, drop_out=drop_out)
-        else: 
+            model, history = build_model(
+                x_train,
+                y_train_categorical,
+                early_stop=early_stop,
+                model_summary=model_summary,
+                num_classes=num_classes,
+                drop_out=drop_out,
+            )
+        else:
             model = load_model(model_name=model_name)
-            model, history = build_model(x_train, y_train_categorical, early_stop=False, model_summary=model_summary, num_classes=num_classes, drop_out=drop_out, from_model=True, model=model, epochs=10, variable_lr=False)
+            model, history = build_model(
+                x_train,
+                y_train_categorical,
+                early_stop=False,
+                model_summary=model_summary,
+                num_classes=num_classes,
+                drop_out=drop_out,
+                from_model=True,
+                model=model,
+                epochs=10,
+                variable_lr=False,
+            )
 
-        fused_vector, test_vector, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(x_train, x_test,y_train, model)
-        
-        for i in range(KNN_neighbors,KNN_neighbors+10):
-            mylogs.info(f'NUMBER OF kNN NEIGHBORS = {i}')
+        fused_vector, test_vector, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3 = three_layer_MDCA(
+            x_train, x_test, y_train, model
+        )
+
+        for i in range(KNN_neighbors, KNN_neighbors + 10):
+            mylogs.info(f"NUMBER OF kNN NEIGHBORS = {i}")
             classifier = KNeighborsClassifier(n_neighbors=i)
             classifier.fit(fused_vector, y_train)
 
             # predict and display using DNN and KNN classifiers
 
             predicted = classifier.predict(test_vector)
-            mylogs.info("DCA Accuracy: {}".format(metrics.accuracy_score(y_test, predicted)))
+            mylogs.info(
+                "DCA Accuracy: {}".format(metrics.accuracy_score(y_test, predicted))
+            )
 
             DCA_accuracy = metrics.accuracy_score(y_test, predicted)
 
             if accuracy_threshold == 0.0:
-                return model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory
+                return (
+                    model,
+                    Ax1,
+                    Ax2,
+                    Ax3,
+                    Ay1,
+                    Ay2,
+                    Ay3,
+                    classifier,
+                    DCA_accuracy,
+                    save_excel_stats,
+                    y_test_ages,
+                    predicted,
+                    history,
+                    y_test,
+                    save_directory,
+                )
             if DCA_accuracy >= accuracy_threshold:
-                model_name = save_model(model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy,
-                save_excel_stats=save_excel_stats, y_test_ages=y_test_ages, predicted=predicted, history=history, y_test=y_test, save_directory=save_directory)
+                model_name = save_model(
+                    model,
+                    Ax1,
+                    Ax2,
+                    Ax3,
+                    Ay1,
+                    Ay2,
+                    Ay3,
+                    classifier,
+                    DCA_accuracy,
+                    save_excel_stats=save_excel_stats,
+                    y_test_ages=y_test_ages,
+                    predicted=predicted,
+                    history=history,
+                    y_test=y_test,
+                    save_directory=save_directory,
+                )
                 return model_name, DCA_accuracy
-            
-            else: model_name = 'Unnamed_model'
-            if not variable_knn: break
+
+            else:
+                model_name = "Unnamed_model"
+            if not variable_knn:
+                break
 
         tf.keras.backend.set_learning_phase(1)
         tf.keras.backend.clear_session()
         del model, history, fused_vector, test_vector, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3
         classifier, predicted
-        if not loop: break
-        elif variable_dropout is not None and variable_dropout != 0.0: 
+        if not loop:
+            break
+        elif variable_dropout is not None and variable_dropout != 0.0:
             drop_out += variable_dropout
-            mylogs.info(f'VARIABLE DROPOUT ENABLED, CURRENT DROPOUT = {drop_out}')
-            assert drop_out <= 0.6, 'DROP OUT TOO HIGH, ABORTING'
-        
+            mylogs.info(f"VARIABLE DROPOUT ENABLED, CURRENT DROPOUT = {drop_out}")
+            assert drop_out <= 0.6, "DROP OUT TOO HIGH, ABORTING"
+
         gc.collect(0)
-        gc.collect() 
+        gc.collect()
     return model_name, DCA_accuracy
 
 
-if __name__ == '__main__':        
-    loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary, variable_dropout, drop_out, variable_knn = False ,False, True, 5, MODEL_SAVE_DIRECTORY, SAVE_MODEL_ACCURACY_THRESHOLD, False, None, DROPOUT, False
+if __name__ == "__main__":
+    (
+        loop,
+        early_stop,
+        save_excel_stats,
+        KNN_neighbors,
+        save_directory,
+        accuracy_threshold,
+        model_summary,
+        variable_dropout,
+        drop_out,
+        variable_knn,
+    ) = (
+        False,
+        False,
+        True,
+        5,
+        MODEL_SAVE_DIRECTORY,
+        SAVE_MODEL_ACCURACY_THRESHOLD,
+        False,
+        None,
+        DROPOUT,
+        False,
+    )
     if args.early_stop:
         early_stop = True
     if args.no_excel:
@@ -506,15 +848,30 @@ if __name__ == '__main__':
         drop_out = args.dropout
     if args.accuracy_threshold:
         accuracy_threshold = args.accuracy_threshold
-        
-    
 
-    if args.notify_telegram: 
-        mylogs.info('TELEGRAM NOTIFICATION ENABLED BY USER. STARTING CONFIG.')
+    if args.notify_telegram:
+        mylogs.info("TELEGRAM NOTIFICATION ENABLED BY USER. STARTING CONFIG.")
         telegram_bot_token, telegram_chatID = notify_telegram(init=True)
 
-    model_name, accuracy = main(loop, early_stop, save_excel_stats, KNN_neighbors, save_directory, accuracy_threshold, model_summary=model_summary, variable_dropout=variable_dropout, drop_out=drop_out, variable_knn=variable_knn)
+    model_name, accuracy = main(
+        loop,
+        early_stop,
+        save_excel_stats,
+        KNN_neighbors,
+        save_directory,
+        accuracy_threshold,
+        model_summary=model_summary,
+        variable_dropout=variable_dropout,
+        drop_out=drop_out,
+        variable_knn=variable_knn,
+    )
 
-    if args.notify_telegram: notify_telegram(model_name, accuracy, telegram_bot_token=telegram_bot_token, telegram_chatID=telegram_chatID)
+    if args.notify_telegram:
+        notify_telegram(
+            model_name,
+            accuracy,
+            telegram_bot_token=telegram_bot_token,
+            telegram_chatID=telegram_chatID,
+        )
     if args.shutdown:
-        subprocess.call(['systemctl', 'poweroff'])
+        subprocess.call(["systemctl", "poweroff"])
