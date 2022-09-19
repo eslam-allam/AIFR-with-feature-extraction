@@ -614,10 +614,7 @@ def predict(imgItSelf, model, Ax1, Ay1, Ax2, Ay2, Ax3, Ay3, classifier):
 
     images_array = np.ndarray((1, 224, 224, 3), dtype="int32")
 
-    # temp_image2 = imgItSelf
-    # print(type(imgItSelf))
-    # images_array[0] = imgItSelf
-
+    # convert 224,244 to 224,224,3
     try:
         imgItSelf = np.repeat(imgItSelf[..., np.newaxis], 3, -1)
         images_array[0] = imgItSelf
@@ -628,9 +625,6 @@ def predict(imgItSelf, model, Ax1, Ay1, Ax2, Ay2, Ax3, Ay3, classifier):
     temp_image2 = images_array.astype("float32")
     temp_image2 = utils.preprocess_input(temp_image2, version=2)
 
-    """fc1 = m1.predict(temp_image2)
-    fc2 = m2.predict(temp_image2)
-    localPooling = pooling.predict(temp_image2)"""
     fc1, fc2, pooling = model.predict(temp_image2)
     fc1 = fc1.T
     fc2 = fc2.T
@@ -652,13 +646,9 @@ def predict(imgItSelf, model, Ax1, Ay1, Ax2, Ay2, Ax3, Ay3, classifier):
 
     predicted = classifier.predict(test_vector)
 
-    # print("From model " + model)
     print(predicted)
-    # self.showOneImgprediction(predicted, imgPath)
+
     return predicted
-
-
-# m1, m2, pooling, Ax1, Ay1, Ax2, Ay2, Ax3, Ay3
 
 
 def main(
