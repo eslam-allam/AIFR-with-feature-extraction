@@ -1,5 +1,4 @@
 # IMPORTING LIBRARIES
-from asyncore import read
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -122,6 +121,8 @@ def proccess_image(image):
         image = cv2.equalizeHist(image)
         image = cv2.resize(image, FINAL_DIMENSIONS, interpolation = cv2.INTER_AREA)
 
+
+        
         return image
 
 
