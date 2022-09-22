@@ -1,15 +1,20 @@
+from multiprocessing import Process , Manager, shared_memory
+from multiprocessing.sharedctypes import Value
+
+
 
 import os
 from flask import Flask, Response, render_template, request
 import cv2
-from collections import deque
 import numpy as np
 from mediapipecam import face_mesh
 from allign import proccess_image
-from AIFR_VGG import MODEL_SAVE_DIRECTORY, load_model, main, save_model
+from AIFR_VGG import  load_model, main, save_model
+import AIFR_VGG
 import logging
 import traceback
 from keras_vggface import utils
+
 
 
 mylogs = logging.getLogger(__name__)
@@ -33,9 +38,8 @@ mylogs.addHandler(logging.getLogger('AIFR_VGG'))
 
 
 
-'''model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory = None, None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None
-test_model, test_m1, test_m2, test_flatten, test_Ax1, test_Ax2, test_Ax3, test_Ay1, test_Ay2, test_Ay3, test_classifier, test_DCA_accuracy, test_save_excel_stats, test_y_test_ages, test_predicted, test_history, test_y_test, test_save_directory = main(model_name='model7_accuracy_89.55', from_model=True, accuracy_threshold=0.0)
-'''
+#active_model, active_Ax1, active_Ax2, active_Ax3, active_Ay1, active_Ay2, active_Ay3, active_classifier= load_model(model_name='model7_accuracy_89.55_enhanced')
+
 NEW_IMAGE_DIRECTORY = '/home/eslamallam/Python/AIFR-with-feature-extraction/datasets/FGNET/newImages'
 HEADERS = {'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'}
 
@@ -52,46 +56,115 @@ def string_to_bool(expression : str):
         return True
     else: return False
 
-frames = deque(maxlen=20)
+def testDevice(source):
+    cap = cv2.VideoCapture(source) 
+    if cap is None or not cap.isOpened():
+        print('Warning: unable to open video source: ', source)
+        return False
+    return True
+
+manager = Manager()
+
+
 current_pic = None
 name = False
 
+
 def generate_frames():
-    camera = cv2.VideoCapture(0)
-    camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1080)
-    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     
-    while True:
-         
-        try:
-        ## read the camera frame
-            success,frame=camera.read()
-            center = frame.shape[0] / 2, frame.shape[1] / 2
-            h = frame.shape[0]
-            w = frame.shape[0]
-            x = center[1] - w/2
-            y = center[0] - h/2
+    shm = shared_memory.SharedMemory(create=True, size=1150528, name='processed_frame_memory')
+    shared_processed_frame = np.ndarray((224, 224, 3), dtype='int32', buffer=shm.buf)
+    prediction = Value('i', 0)
+    parallel = Process(target= AIFR_VGG.predict, args=(prediction,))
+    parallel.start()
+    try:
 
-            frame = frame[int(y):int(y+h), int(x):int(x+w)]
-            frames.append(frame)
+        if  testDevice(0): camera = cv2.VideoCapture(0)   
+        else:
+            return
+        
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        processed_frame = None
+
+        font                   = cv2.FONT_HERSHEY_SIMPLEX
+        fontScale              = 1
+        fontColor              = (255,255,255)
+        thickness              = 1
+        lineType               = 2
+        name = ''
+
+        
+        
+        
+        
+        while True:
             
-            frame = face_mesh(frame)
-            
-            if not success:
-                break
-            else:
-                ret,buffer=cv2.imencode('.jpg',frame)
-                frame=buffer.tobytes()
+            try:
+                
+            ## read the camera frame
+                success,frame=camera.read()
+
+                
+
+                processed_frame = proccess_image(frame)
+                processed_frame = np.repeat(processed_frame[..., np.newaxis], 3, -1)
+                if processed_frame is None: continue
+                
+                
+                if prediction.value != 0:
+                    shared_processed_frame[:] = processed_frame[:]
+                    
+                
+                
+                
+                if prediction.value <= 0:
+                    name = 'Analyzing Face'
+                else: 
+                    name = str(prediction.value)
+               
+                
 
 
-            
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        except AttributeError:
-            yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + video_error + b'\r\n')
+                
+                
+                frame, top_right_landmark = face_mesh(frame)
+                
+                
+                cv2.putText(frame,name, 
+                top_right_landmark, 
+                font, 
+                fontScale,
+                fontColor,
+                thickness,
+                lineType)
+                
+                if not success:
+                    break
+                else:
+                    _,buffer=cv2.imencode('.jpg',frame)
+                    frame=buffer.tobytes()
+
+
+                
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            except AttributeError as e:
+                print(e)
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + video_error + b'\r\n')
+    except GeneratorExit:
+        print('joining child')
+        parallel.kill()
+        print('closed')
+        camera.release()
+        shm.close()
+        shm.unlink()
+   
+    
+
     
             
-        #time.sleep(0.1)
-    camera.release()
+      
+    
     
     
 @app.route("/predict")
@@ -134,8 +207,10 @@ def hello_world():
 
 @app.route('/video')
 def video():
-    
+   
     return Response(generate_frames(),mimetype='multipart/x-mixed-replace;boundary=frame', headers=HEADERS)
+    
+    
 
 @app.route('/capture', methods=['GET', 'POST', 'OPTIONS'])
 def capture():

@@ -1,4 +1,8 @@
 import argparse
+from multiprocessing import Manager
+import time
+from typing import List
+
 
 parser = argparse.ArgumentParser(
     description="Train and save a DNN-MDCA model using a dataset from directory. The input images must have a shape of (224, 224, 3) and prefereably preprocessed adequatily."
@@ -126,6 +130,7 @@ from tqdm import tqdm as meter
 import gc
 import random
 import subprocess
+from multiprocessing import shared_memory
 
 
 tf.get_logger().setLevel(logging.CRITICAL)
@@ -274,22 +279,11 @@ def load_model(directory=MODEL_SAVE_DIRECTORY, model_name=""):
 
     try:
         with open(directory + model_name + "/compressed_models.pcl", "rb") as f:
-            (
-                model,
-                m1,
-                m2,
-                flatten,
-                Ax1,
-                Ax2,
-                Ax3,
-                Ay1,
-                Ay2,
-                Ay3,
-                classifier,
-            ) = pickle.load(f)
+            
+            model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
 
         mylogs.info(f"MODEL LOADED SUCCESFULLY")
-        return model
+        return model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier
     except:
         mylogs.error("UNABLE TO LOAD MODEL.")
 
@@ -490,15 +484,7 @@ def model_stats_to_excel(
 
 
 def save_model(
-    model,
-    Ax1,
-    Ax2,
-    Ax3,
-    Ay1,
-    Ay2,
-    Ay3,
-    classifier,
-    accuracy,
+    model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accuracy,
     save_directory=MODEL_SAVE_DIRECTORY,
     model_name=None,
     save_excel_stats=False,
@@ -609,46 +595,60 @@ def notify_telegram(
         mylogs.warning("**********************STATUS:NO OK**********************")
         mylogs.warning("MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID")
 
+def predict(shared_prediction):
+    model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = load_model(model_name='model7_accuracy_89.55_enhanced')
+    config = model.get_config() # Returns pretty much every information about your model
+    print(config["layers"][0]["config"]["batch_input_shape"], flush=True) 
 
-def predict(imgItSelf, model, Ax1, Ay1, Ax2, Ay2, Ax3, Ay3, classifier):
-
-    images_array = np.ndarray((1, 224, 224, 3), dtype="int32")
-
-    # convert 224,244 to 224,224,3
+    shm = shared_memory.SharedMemory(name='processed_frame_memory')
+    shared_processed_frame = np.ndarray((224, 224, 3), dtype='int32', buffer=shm.buf)
     try:
-        imgItSelf = np.repeat(imgItSelf[..., np.newaxis], 3, -1)
-        images_array[0] = imgItSelf
-    except:
-        print("issue with image shape")
-        return -1
+        print('child process started', flush=True)
+        images_array = np.ndarray((1 ,224,224,3), dtype='int32')
+        shared_prediction.value = -1
+        
+        
+        while True:
+            time.sleep(2)
+            
+            images_array[0] = shared_processed_frame.copy()
+            images_array = images_array.astype("float32")
+            images_array = utils.preprocess_input(images_array, version=2)
 
-    temp_image2 = images_array.astype("float32")
-    temp_image2 = utils.preprocess_input(temp_image2, version=2)
+            try:
+                fc1, fc2, pooling = model.predict(images_array)
+            except Exception as e:
+                print(e, flush=True)
+                continue
+            
+            fc1 = fc1.T
+            fc2 = fc2.T
+            pooling = pooling.T
 
-    fc1, fc2, pooling = model.predict(temp_image2)
-    fc1 = fc1.T
-    fc2 = fc2.T
-    pooling = pooling.T
+            testX = np.matmul(Ax1, fc1)
+            testY = np.matmul(Ay1, fc2)
+            test_vector1 = np.concatenate((testX, testY))
 
-    testX = np.matmul(Ax1, fc1)
-    testY = np.matmul(Ay1, fc2)
-    test_vector1 = np.concatenate((testX, testY))
+            testX = np.matmul(Ax2, fc1)
+            testY = np.matmul(Ay2, pooling)
+            test_vector2 = np.concatenate((testX, testY))
 
-    testX = np.matmul(Ax2, fc1)
-    testY = np.matmul(Ay2, pooling)
-    test_vector2 = np.concatenate((testX, testY))
+            testX = np.matmul(Ax3, test_vector1)
+            testY = np.matmul(Ay3, test_vector2)
+            test_vector3 = np.concatenate((testX, testY))
 
-    testX = np.matmul(Ax3, test_vector1)
-    testY = np.matmul(Ay3, test_vector2)
-    test_vector3 = np.concatenate((testX, testY))
+            test_vector = test_vector3.T
 
-    test_vector = test_vector3.T
+            predicted = classifier.predict(test_vector)
+            shared_prediction.value = predicted[0]
+            
+            
 
-    predicted = classifier.predict(test_vector)
-
-    print(predicted)
-
-    return predicted
+            
+    except Exception as e:
+        print(e, flush=True)
+        print('child closed', flush=True)
+        shm.close()
 
 
 def main(

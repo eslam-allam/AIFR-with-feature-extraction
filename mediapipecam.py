@@ -14,7 +14,7 @@ drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
 
 def face_mesh(image):
         # display image from cam in opencv window
-        
+        top_right_landmark = []
         
         with mp_face_mesh.FaceMesh(
         max_num_faces=1,
@@ -36,6 +36,7 @@ def face_mesh(image):
 
 
             if results.multi_face_landmarks:
+                top_right_landmark = results.multi_face_landmarks[0].landmark[332]
                 for face_landmarks in results.multi_face_landmarks:
                     mp_drawing.draw_landmarks(
                         image=image,
@@ -59,6 +60,6 @@ def face_mesh(image):
                         connection_drawing_spec=mp_drawing_styles
                         .get_default_face_mesh_iris_connections_style())
         
-        return image
+        return image, (int(top_right_landmark.x*image.shape[1]), int(top_right_landmark.y*image.shape[0]))
 
     
