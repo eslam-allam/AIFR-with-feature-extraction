@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 from mediapipecam import face_mesh
 from allign import proccess_image
-from AIFR_VGG import  load_model, main, save_model
+from AIFR_VGG import  MODEL_SAVE_DIRECTORY, main, save_model
 import AIFR_VGG
 import logging
 import traceback
@@ -38,9 +38,7 @@ mylogs.addHandler(logging.getLogger('AIFR_VGG'))
 
 
 
-#active_model, active_Ax1, active_Ax2, active_Ax3, active_Ay1, active_Ay2, active_Ay3, active_classifier= load_model(model_name='model7_accuracy_89.55_enhanced')
-
-NEW_IMAGE_DIRECTORY = '/home/eslamallam/Python/AIFR-with-feature-extraction/datasets/FGNET/newImages'
+NEW_IMAGE_DIRECTORY = './datasets/FGNET/newImages'
 HEADERS = {'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'}
 
 video_error = cv2.imread('guiImages/video_error.png')
@@ -48,6 +46,41 @@ ret, video_error = cv2.imencode('.jpg',video_error)
 video_error = video_error.tobytes()
 
 app = Flask(__name__)
+
+def switch_duplicates(duplicates:int):
+
+    if duplicates == 0:
+        return ''
+    elif duplicates == 1:
+        return 'b'
+    elif duplicates == 2:
+        return 'c'
+    elif duplicates == 3:
+        return 'd'
+    elif duplicates == 4:
+        return 'e'
+    elif duplicates == 5:
+        return 'f'
+    elif duplicates == 6:
+        return 'g'
+    elif duplicates == 7:
+        return 'h'
+    elif duplicates == 8:
+        return 'i'
+    elif duplicates == 9:
+        return 'j'
+    elif duplicates == 10:
+        return 'k'
+    elif duplicates == 11:
+        return 'l'
+    elif duplicates == 12:
+        return 'm'
+    elif duplicates == 13:
+        return 'n'
+    elif duplicates == 14:
+        return 'o'
+    elif duplicates == 15:
+        return 'p'
 
 #camera=cv2.VideoCapture(2)
 
@@ -160,47 +193,6 @@ def generate_frames():
         shm.unlink()
    
     
-
-    
-            
-      
-    
-    
-    
-@app.route("/predict")
-def predict():
-    frame = frames[-1]
-    frame = proccess_image(frame)
-    frame =  utils.preprocess_input(frame,version=2)
-    fc1 = m1.predict(frame)
-    fc2 = m2.predict(frame)
-    pooling = pooling.predict(frame)
-
-    fc1 = fc1.T
-    fc2 = fc2.T
-    pooling = pooling.T
-
-
-    testX = np.matmul(Ax1,fc1)
-    testY = np.matmul(Ay1, fc2)
-    test_vector1 = np.concatenate((testX,testY))
-
-    testX = np.matmul(Ax2,fc1)
-    testY = np.matmul(Ay2, pooling)
-    test_vector2 = np.concatenate((testX,testY))
-
-    testX = np.matmul(Ax3,test_vector1)
-    testY = np.matmul(Ay3, test_vector2)
-    test_vector3 = np.concatenate((testX,testY))
-
-    test_vector = test_vector3.T
-
-
-    predicted = classifier.predict(test_vector)
-
-    print(f'prediction: {predicted}')
-
-
 @app.route("/")
 def hello_world():
     return render_template('index.html')
@@ -212,72 +204,48 @@ def video():
     
     
 
-@app.route('/capture', methods=['GET', 'POST', 'OPTIONS'])
-def capture():
+@app.route('/uploadimage', methods=['POST', 'OPTIONS'])
+def upload_image():
+    image = request.files.get('files.myImage')
+    image_name = image.filename
+    image = np.fromfile(image)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+    image = proccess_image(image)
 
-    global current_pic
-    global name
+    if image is None:
+        print('face not found')
+        return Response('',status=404, headers=HEADERS)
+
+
+
+    image_list = sorted(os.listdir(NEW_IMAGE_DIRECTORY))
+    username, age = image_name.split('.')[0].split('A')
+    usernumber = ''
+    for name in image_list:
+        if username in name:
+            usernumber = name[0:3]
+            break
+    if not usernumber:
+        usernumber = str(int(image_list[-1][0:3]) + 1).zfill(3)
     
-    new_image_directory = ''
-    args = request.args
-    save = args.get('save')
-    get_result = args.get('getresult') 
-    name = args.get('name').lower()
-    age = args.get('age')
     
-   
-    if get_result == 'True':
-        return Response(cv2.imencode('.jpg', current_pic)[1].tobytes(),status=200, headers=HEADERS)
+    duplicates = 0
+    for name in image_list:
+        if usernumber in name and age in name:
+            duplicates += 1
+    print(duplicates)
+    age += switch_duplicates(duplicates)
+    image_name = f'{usernumber}-{username}A{age}.jpg'
 
+    cv2.imwrite(f'{NEW_IMAGE_DIRECTORY}/{image_name}', image)
 
-    try:
-        if save == 'False':
-            if request.method == 'GET':
-                image=frames.pop()
-                name = False
-            else:
-                
-                image = request.files.get('files.myImage')
-                
+    return Response('',status=200, headers=HEADERS)
 
-                
-                
-                
-                image = np.fromfile(image)
-                image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-                
-
-            image = proccess_image(image)
-            current_pic = image
-
-            if image is None: 
-                print('face not found')
-                return Response(status=403, headers=HEADERS)
-            image = cv2.imencode('.jpg', image)[1].tobytes()
-            
-
-            return Response(image,status=200, headers=HEADERS)
-        else:
-            
-            last_image_name = sorted(os.listdir(NEW_IMAGE_DIRECTORY))[-1]
-            last_image_name = last_image_name.split('.')[0].split('A')[0].split('-')
-            last_id, last_name = int(last_image_name[0]), last_image_name[1].lower()
-            
-            if last_name != name: last_id = last_id + 1
-            
-            name = f'{str(last_id).zfill(3)}-{name}A{age.zfill(2)}.jpg'
-            
-            if new_image_directory: cv2.imwrite(f'{new_image_directory}/{name}', current_pic)
-            else:
-                cv2.imwrite(f'{NEW_IMAGE_DIRECTORY}/{name}', current_pic)
-            
-            return Response(status=200, headers=HEADERS)
-    except:
-        return Response(status=500, headers=HEADERS)
+    
+    
     
 @app.route('/trainmodel', methods=['GET'])
 def trainmodel():
-    global model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory
 
     args = request.args
     loop = string_to_bool(args['loop'])

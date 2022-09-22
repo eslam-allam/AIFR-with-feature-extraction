@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:client/widgets.dart';
 import 'package:custom_radio_grouped_button/custom_radio_grouped_button.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 
 // ignore: must_be_immutable
 class AddImagePage extends StatefulWidget {
@@ -713,6 +714,75 @@ class _AddImagePageState extends State<AddImagePage> {
                         label: const Text('Pick Images'),
                         icon: const Icon(Icons.folder)),
                   ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: edge20 * 0.8),
+                      child: ElevatedButton.icon(
+                        style: ButtonStyle(
+                          backgroundColor:
+                              const MaterialStatePropertyAll(Colors.green),
+                          minimumSize: MaterialStatePropertyAll(
+                            Size(edge20, edge20 * 3),
+                          ),
+                        ),
+                        onPressed: () async {
+                          String url = 'http://localhost:5000/uploadimage';
+                          String message =
+                              'Please confirm name and age of images';
+                          for (int i = 0;
+                              i < _imageFilesBytesList.length;
+                              i++) {
+                            if (_inputAgeList.isEmpty) break;
+                            if (i == _inputAgeList.length) break;
+                            if (_inputAgeList[i] == '0') {
+                              message += '#$i,';
+                              continue;
+                            }
+
+                            http.StreamedResponse response =
+                                await asyncFileUpload(
+                                    _imageNameList[i],
+                                    _inputAgeList[i],
+                                    _imageFilesBytesList[i],
+                                    url);
+                            if (response.statusCode == 404) {
+                              SnackBar snackBar = SnackBar(
+                                duration: const Duration(seconds: 10),
+                                content: Text(
+                                    'Could not find face in image ${_imageNameList[i]}'),
+                              );
+                              // ignore: use_build_context_synchronously
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(snackBar);
+                            }
+                            setState(() {
+                              _imageNameList.removeAt(i);
+                              _imagePathList.removeAt(i);
+                              _ageControllers.removeAt(i);
+                              _validateAge.removeAt(i);
+                              _inputAgeList.removeAt(i);
+                              _limitExceeded.removeAt(i);
+                              _imageFilesBytesList.removeAt(i);
+                            });
+                            i--;
+                          }
+                          if (message !=
+                              'Please confirm name and age of images') {
+                            SnackBar snackBar = SnackBar(
+                              duration: const Duration(seconds: 10),
+                              content: Text(message),
+                            );
+                            // ignore: use_build_context_synchronously
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(snackBar);
+                          }
+                        },
+                        icon: const Icon(Icons.check_circle),
+                        label: const Text("Submit Images"),
+                      ),
+                    ),
+                  )
                 ],
               ),
             ),

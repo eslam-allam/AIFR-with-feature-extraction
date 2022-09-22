@@ -24,24 +24,16 @@ class VideoFeed extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       flex: 10,
-      child: ClayContainer(
-        height: heightNoToolbar,
-        color: const Color(0xff121212),
-        borderRadius: 10,
-        child: Padding(
-          padding: EdgeInsets.all(edge20 * 1.5),
-          child: Mjpeg(
-            error: (context, error, stack) {
-              return Image.asset(
-                'images/video_error.png',
-                fit: BoxFit.fill,
-              );
-            },
-            fit: BoxFit.fitWidth,
-            isLive: isRunning,
-            stream: 'http://localhost:5000/video',
-          ),
-        ),
+      child: Mjpeg(
+        error: (context, error, stack) {
+          return Image.asset(
+            'images/video_error.png',
+            fit: BoxFit.fill,
+          );
+        },
+        fit: BoxFit.contain,
+        isLive: isRunning,
+        stream: 'http://localhost:5000/video',
       ),
     );
   }
@@ -194,7 +186,7 @@ void captureAlert(
   } else {
     assert(image != null, 'Passed image is null');
 
-    response = await _asyncFileUpload(name, age, image, url);
+    response = await asyncFileUpload(name, age, image, url);
   }
 
   code = response.statusCode;
@@ -310,7 +302,7 @@ class ButtonWrap extends StatelessWidget {
   }
 }
 
-Future _asyncFileUpload(
+Future asyncFileUpload(
     String name, String age, Uint8List image, String url) async {
   //create multipart request for POST or PATCH method
   var request = http.MultipartRequest("POST", Uri.parse(url));
@@ -318,20 +310,14 @@ Future _asyncFileUpload(
 
   //create multipart using filepath, string or bytes
   var pic = http.MultipartFile.fromBytes('files.myImage', image,
-      contentType: MediaType.parse('image/jpeg'), filename: 'image.jpg');
+      contentType: MediaType.parse('image/jpeg'), filename: name);
   //add multipart to request
 
-  request.fields['directory'] = '';
   request.files.add(pic);
 
   http.StreamedResponse responsestream = await request.send();
 
-  if (responsestream.statusCode == 200) {
-    http.Response response = await http.get(Uri.parse('$url&getresult=True'));
-    return response;
-  } else {
-    return http.Response('', responsestream.statusCode);
-  }
+  return responsestream;
 }
 
 class TextNumberInput extends StatelessWidget {
