@@ -210,7 +210,7 @@ def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
     mylogs.debug(f"NUMBER OF IMAGES: {len(images_path)}")
     finalData = []
     totalImages = 0
-    for i, path in enumerate(images_path):
+    for i, path in enumerate(meter(images_path)):
         temp_image = cv2.imread(directory + path)
         totalImages += 1
 
