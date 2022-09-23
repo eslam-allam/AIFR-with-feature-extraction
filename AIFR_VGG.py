@@ -132,7 +132,7 @@ import gc
 import random
 import subprocess
 from multiprocessing import shared_memory
-
+from sklearn.utils import shuffle
 
 tf.get_logger().setLevel(logging.CRITICAL)
 mylogs = logging.getLogger(__name__)
@@ -205,6 +205,105 @@ def lr_schedule(epoch):
 
 
 def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
+
+    images_path = os.listdir(directory)
+
+    finalData = []
+    totalImages = 0
+    for i, path in enumerate(images_path):
+        temp_image = cv2.imread(directory + path)
+        totalImages += 1
+
+        label = path.split(".")[0].split("A")
+        label[1] = re.sub(r"[aA-zZ]+", "", label[1])
+        label = label[0].split("-") + [label[1]]
+        if len(label) == 3:
+            label, name, age = label[0], label[1], label[2]
+
+        else:
+            label, age = label[0], label[1]
+
+        finalData.append(
+            [label, temp_image, age]
+        )  ## just need to change here and at the start of the loop to extract the images
+
+    collectingData = {}
+
+    for data in finalData:
+        try:
+            collectingData[data[0]].append([data[1], data[2]])
+        except:
+            # print("An exception occurred")
+            collectingData[data[0]] = [[data[1], data[2]]]
+    X_train = []
+    X_test = []
+    y_train1 = []  # labels
+    y_test1 = []  # labels
+    y_test_ages = []
+
+    for tags in collectingData:
+
+        numOfImgs = len(collectingData[tags])
+        testSetCount = round(numOfImgs * 0.15)
+        trainSetCount = numOfImgs - testSetCount
+        for i, imags in enumerate(collectingData[tags]):
+            if i < trainSetCount:
+                cv2.imshow("graycsale image", imags[0])
+                cv2.waitKey(0)
+                X_train.append(imags[0])
+                y_train1.append(int(tags) - 1)
+            else:
+                print("test set")
+                cv2.imshow("graycsale image", imags[0])
+                cv2.waitKey(0)
+
+                X_test.append(imags[0])
+                y_test1.append(int(tags) - 1)
+                y_test_ages.append(imags[1])
+        # print("-")
+    images_array1 = np.ndarray((len(X_train), 224, 224, 3), dtype="int32")
+    images_array2 = np.ndarray((len(X_test), 224, 224, 3), dtype="int32")
+
+    for i, ins in enumerate(X_train):
+        images_array1[i] = ins
+    for i, ins in enumerate(X_test):
+        images_array2[i] = ins
+
+    X_train = images_array1
+    X_test = images_array2
+    y_train1 = np.array(y_train1)
+    y_test1 = np.array(y_test1)
+
+    ############################
+    seed = random.randint(0, 2 ** 32 - 1)
+    ############################
+
+    X_train, y_train1 = shuffle(X_train, y_train1, random_state=33)
+    X_test, y_test1 = shuffle(X_test, y_test1, random_state=33)
+    ############################
+    y_train_categorical = tf.keras.utils.to_categorical(
+        y_train1, num_classes=len(collectingData), dtype="float32"
+    )
+
+    X_train = X_train.astype("float32")
+    X_test = X_test.astype("float32")
+
+    X_train = utils.preprocess_input(X_train, version=2)
+    X_test = utils.preprocess_input(X_test, version=2)
+    ################################
+
+    return (
+        X_train,
+        y_train1,
+        X_test,
+        y_test1,
+        y_train_categorical,
+        y_test_ages,
+        len(collectingData),
+    )
+
+
+def load_dataset2(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
     image_list = os.listdir(directory)
 
     number_of_images = len(image_list)
@@ -281,13 +380,13 @@ def load_model(directory=MODEL_SAVE_DIRECTORY, model_name=""):
 
     try:
         with open(directory + model_name + "/compressed_models.pcl", "rb") as f:
-            
+
             model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = pickle.load(f)
 
         mylogs.info(f"MODEL LOADED SUCCESFULLY")
         return model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier
     except Exception as e:
-        print (e)
+        print(e)
 
         mylogs.error("UNABLE TO LOAD MODEL.")
 
@@ -488,7 +587,15 @@ def model_stats_to_excel(
 
 
 def save_model(
-    model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, accuracy,
+    model,
+    Ax1,
+    Ax2,
+    Ax3,
+    Ay1,
+    Ay2,
+    Ay3,
+    classifier,
+    accuracy,
     save_directory=MODEL_SAVE_DIRECTORY,
     model_name=None,
     save_excel_stats=False,
@@ -599,25 +706,27 @@ def notify_telegram(
         mylogs.warning("**********************STATUS:NO OK**********************")
         mylogs.warning("MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID")
 
-def predict(shared_prediction, active_model):
-    
-    model_name = active_model.value
-        
-    model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = load_model(model_name=model_name)
-    config = model.get_config() # Returns pretty much every information about your model
-    print(config["layers"][0]["config"]["batch_input_shape"], flush=True) 
 
-    shm = shared_memory.SharedMemory(name='processed_frame_memory')
-    shared_processed_frame = np.ndarray((224, 224, 3), dtype='int32', buffer=shm.buf)
+def predict(shared_prediction, active_model):
+
+    model_name = active_model.value
+
+    model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = load_model(model_name=model_name)
+    config = (
+        model.get_config()
+    )  # Returns pretty much every information about your model
+    print(config["layers"][0]["config"]["batch_input_shape"], flush=True)
+
+    shm = shared_memory.SharedMemory(name="processed_frame_memory")
+    shared_processed_frame = np.ndarray((224, 224, 3), dtype="int32", buffer=shm.buf)
     try:
-        print('child process started', flush=True)
-        images_array = np.ndarray((1 ,224,224,3), dtype='int32')
+        print("child process started", flush=True)
+        images_array = np.ndarray((1, 224, 224, 3), dtype="int32")
         shared_prediction.value = -1
-        
-        
+
         while True:
             time.sleep(2)
-            
+
             images_array[0] = shared_processed_frame.copy()
             images_array = images_array.astype("float32")
             images_array = utils.preprocess_input(images_array, version=2)
@@ -627,7 +736,7 @@ def predict(shared_prediction, active_model):
             except Exception as e:
                 print(e, flush=True)
                 continue
-            
+
             fc1 = fc1.T
             fc2 = fc2.T
             pooling = pooling.T
@@ -649,10 +758,9 @@ def predict(shared_prediction, active_model):
             predicted = classifier.predict(test_vector)
             shared_prediction.value = predicted[0]
 
-        
     except Exception as e:
         print(e, flush=True)
-        print('child closed', flush=True)
+        print("child closed", flush=True)
         shm.close()
 
 
