@@ -248,14 +248,10 @@ def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
         trainSetCount = numOfImgs - testSetCount
         for i, imags in enumerate(collectingData[tags]):
             if i < trainSetCount:
-                cv2.imshow("graycsale image", imags[0])
-                cv2.waitKey(0)
+
                 X_train.append(imags[0])
                 y_train1.append(int(tags) - 1)
             else:
-                print("test set")
-                cv2.imshow("graycsale image", imags[0])
-                cv2.waitKey(0)
 
                 X_test.append(imags[0])
                 y_test1.append(int(tags) - 1)
