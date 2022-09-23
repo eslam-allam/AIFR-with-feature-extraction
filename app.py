@@ -144,31 +144,33 @@ def generate_frames():
                 
 
                 processed_frame = proccess_image(frame)
-                if processed_frame is None: continue
-                processed_frame = np.repeat(processed_frame[..., np.newaxis], 3, -1)
-                
-                
-                
-                if prediction.value != 0:
-                    shared_processed_frame[:] = processed_frame[:]
+                if processed_frame is None: 
+                    processed_frame = frame
+                else:
+                    processed_frame = np.repeat(processed_frame[..., np.newaxis], 3, -1)
                     
- 
-                if prediction.value <= 0:
-                    name = 'Analyzing Face'
-                else: 
-                    name = str(prediction.value)
-               
+                    
+                    
+                    if prediction.value != 0:
+                        shared_processed_frame[:] = processed_frame[:]
+                        
+    
+                    if prediction.value <= 0:
+                        name = 'Analyzing Face'
+                    else: 
+                        name = str(prediction.value)
+                
 
-                frame, top_right_landmark = face_mesh(frame)
-                
-                
-                cv2.putText(frame,name, 
-                top_right_landmark, 
-                font, 
-                fontScale,
-                fontColor,
-                thickness,
-                lineType)
+                    frame, top_right_landmark = face_mesh(frame)
+                    
+                    
+                    cv2.putText(frame,name, 
+                    top_right_landmark, 
+                    font, 
+                    fontScale,
+                    fontColor,
+                    thickness,
+                    lineType)
                 
                 if not success:
                     break
@@ -293,5 +295,5 @@ if __name__=="__main__":
     #active_model = 'model8_accuracy_84.08'
     multiprocessing.set_start_method('spawn') 
     manager = Manager()
-    active_model = manager.Value(c_char_p, "model9_accuracy_82.09")
+    active_model = manager.Value(c_char_p, "model10_accuracy_83.02")
     app.run(host='0.0.0.0',port=5000, threaded=True, use_reloader = False)
