@@ -1,7 +1,6 @@
-from multiprocessing import Process , Manager, shared_memory
-from multiprocessing.sharedctypes import Value
-
-
+import ctypes
+from multiprocessing import Process , shared_memory, Value, Manager
+import multiprocessing
 
 import os
 from flask import Flask, Response, render_template, request
@@ -13,8 +12,14 @@ from AIFR_VGG import  MODEL_SAVE_DIRECTORY, main, save_model
 import AIFR_VGG
 import logging
 import traceback
-from keras_vggface import utils
+from ctypes import c_char_p
+import tensorflow as tf
+import gc
+from numba import cuda
 
+
+
+model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
 
 
 mylogs = logging.getLogger(__name__)
@@ -40,7 +45,6 @@ mylogs.addHandler(logging.getLogger('AIFR_VGG'))
 
 NEW_IMAGE_DIRECTORY = './datasets/FGNET/newImages'
 HEADERS = {'Access-Control-Allow-Origin': "*", "Access-Control-Allow-Headers":'Content-Type', 'Referrer-Policy':"no-referrer-when-downgrade","content-type":'image/jpeg'}
-
 video_error = cv2.imread('guiImages/video_error.png')
 ret, video_error = cv2.imencode('.jpg',video_error)
 video_error = video_error.tobytes()
@@ -96,7 +100,6 @@ def testDevice(source):
         return False
     return True
 
-manager = Manager()
 
 
 current_pic = None
@@ -104,11 +107,15 @@ name = False
 
 
 def generate_frames():
+    tf.keras.backend.clear_session()
+    gc.collect()
+    device = cuda.get_current_device()
+    device.reset()
     
     shm = shared_memory.SharedMemory(create=True, size=1150528, name='processed_frame_memory')
     shared_processed_frame = np.ndarray((224, 224, 3), dtype='int32', buffer=shm.buf)
     prediction = Value('i', 0)
-    parallel = Process(target= AIFR_VGG.predict, args=(prediction,))
+    parallel = Process(target= AIFR_VGG.predict, args=(prediction, active_model,))
     parallel.start()
     try:
 
@@ -127,10 +134,6 @@ def generate_frames():
         lineType               = 2
         name = ''
 
-        
-        
-        
-        
         while True:
             
             try:
@@ -141,26 +144,21 @@ def generate_frames():
                 
 
                 processed_frame = proccess_image(frame)
-                processed_frame = np.repeat(processed_frame[..., np.newaxis], 3, -1)
                 if processed_frame is None: continue
+                processed_frame = np.repeat(processed_frame[..., np.newaxis], 3, -1)
+                
                 
                 
                 if prediction.value != 0:
                     shared_processed_frame[:] = processed_frame[:]
                     
-                
-                
-                
+ 
                 if prediction.value <= 0:
                     name = 'Analyzing Face'
                 else: 
                     name = str(prediction.value)
                
-                
 
-
-                
-                
                 frame, top_right_landmark = face_mesh(frame)
                 
                 
@@ -202,8 +200,6 @@ def video():
    
     return Response(generate_frames(),mimetype='multipart/x-mixed-replace;boundary=frame', headers=HEADERS)
     
-    
-
 @app.route('/uploadimage', methods=['POST', 'OPTIONS'])
 def upload_image():
     image = request.files.get('files.myImage')
@@ -242,11 +238,11 @@ def upload_image():
     return Response('',status=200, headers=HEADERS)
 
     
-    
-    
 @app.route('/trainmodel', methods=['GET'])
 def trainmodel():
-
+    
+    global model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory, active_model
+    
     args = request.args
     loop = string_to_bool(args['loop'])
     es = string_to_bool(args['es'])
@@ -262,7 +258,7 @@ def trainmodel():
     try:
         if not save:
             if not auto_save:
-                model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory = main(loop, es, estats, knn, accuracy_threshold=at, variable_knn=vknn, drop_out=dropout, variable_dropout=vdropout)
+                model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory = main(loop, es, estats, knn, accuracy_threshold=at, variable_knn=vknn, drop_out=dropout, variable_dropout=vdropout)
                 response = f'Your model has finished training with an accuracy of {DCA_accuracy * 100:.2f}% click save if you wish to keep it.'
                 return Response(response,status=200, headers=HEADERS)
             else:
@@ -271,12 +267,18 @@ def trainmodel():
                     response = f'Your model has finished training with an accuracy of {dca_accuracy * 100:.2f}% and was saved at {MODEL_SAVE_DIRECTORY}/{model_name}'
                 else: 
                     response = f'Your model has finished training with an accuracy of {dca_accuracy * 100:.2f}% and was discarded'
-
+                
                 return Response(response,status=200, headers=HEADERS)
         else:
-            model_name = save_model(model, m1, m2, flatten, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy,
+            model_name = save_model(model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy,
                 save_excel_stats=save_excel_stats, y_test_ages=y_test_ages, predicted=predicted, history=history, y_test=y_test, save_directory=save_directory)
-            response = f'Your model has finished training with an accuracy of {DCA_accuracy * 100:.2f}% and was saved at {MODEL_SAVE_DIRECTORY}/{model_name}'
+            
+            active_model.value = model_name
+            
+
+            model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier, DCA_accuracy, save_excel_stats, y_test_ages, predicted, history, y_test, save_directory = None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+            response = f'Your model was saved at {MODEL_SAVE_DIRECTORY}/{model_name}'
+            
             return Response(response,status=200, headers=HEADERS)
 
 
@@ -287,4 +289,9 @@ def trainmodel():
     
 
 if __name__=="__main__":
+
+    #active_model = 'model8_accuracy_84.08'
+    multiprocessing.set_start_method('spawn') 
+    manager = Manager()
+    active_model = manager.Value(c_char_p, "model9_accuracy_82.09")
     app.run(host='0.0.0.0',port=5000, threaded=True, use_reloader = False)

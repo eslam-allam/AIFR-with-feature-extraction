@@ -1,5 +1,6 @@
 import argparse
 from multiprocessing import Manager
+from multiprocessing.sharedctypes import Value
 import time
 from typing import List
 
@@ -269,6 +270,7 @@ def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
 
 
 def load_model(directory=MODEL_SAVE_DIRECTORY, model_name=""):
+    tf.keras.backend.clear_session()
 
     if not model_name:
         model_name = sorted(os.listdir(directory))[-1]
@@ -284,7 +286,9 @@ def load_model(directory=MODEL_SAVE_DIRECTORY, model_name=""):
 
         mylogs.info(f"MODEL LOADED SUCCESFULLY")
         return model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier
-    except:
+    except Exception as e:
+        print (e)
+
         mylogs.error("UNABLE TO LOAD MODEL.")
 
 
@@ -496,7 +500,7 @@ def save_model(
 
     if not model_name:
         last_model_num = (
-            int(sorted(os.listdir(save_directory))[-1].split("_")[0][5]) + 1
+            int(sorted(os.listdir(save_directory))[-1].split("_")[0][5:]) + 1
         )
         model_name = f"model{last_model_num}_accuracy_{accuracy*100:.2f}"
 
@@ -516,7 +520,7 @@ def save_model(
             and y_test is not None
         ), "y_test_ages, predicted, history, y_test are required to generate model stats"
         model_stats_to_excel(y_test_ages, predicted, history, y_test, model_location)
-
+    tf.keras.backend.clear_session()
     if model_name:
         return model_name
     else:
@@ -595,8 +599,11 @@ def notify_telegram(
         mylogs.warning("**********************STATUS:NO OK**********************")
         mylogs.warning("MESSAGE NOT SENT!! PLEASE CHECK BOT PARAMETERS OR CHAT ID")
 
-def predict(shared_prediction):
-    model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = load_model(model_name='model7_accuracy_89.55_enhanced')
+def predict(shared_prediction, active_model):
+    
+    model_name = active_model.value
+        
+    model, Ax1, Ax2, Ax3, Ay1, Ay2, Ay3, classifier = load_model(model_name=model_name)
     config = model.get_config() # Returns pretty much every information about your model
     print(config["layers"][0]["config"]["batch_input_shape"], flush=True) 
 
@@ -641,10 +648,8 @@ def predict(shared_prediction):
 
             predicted = classifier.predict(test_vector)
             shared_prediction.value = predicted[0]
-            
-            
 
-            
+        
     except Exception as e:
         print(e, flush=True)
         print('child closed', flush=True)
