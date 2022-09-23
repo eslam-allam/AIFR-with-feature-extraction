@@ -276,7 +276,9 @@ def load_dataset(directory=DATASET_DIRECTORY, image_shape=IMAGE_SHAPE):
     ############################
 
     X_train, y_train1 = shuffle(X_train, y_train1, random_state=33)
-    X_test, y_test1 = shuffle(X_test, y_test1, y_test_ages, random_state=33)
+    X_test, y_test1, y_test_ages = shuffle(
+        X_test, y_test1, y_test_ages, random_state=33
+    )
     ############################
     y_train_categorical = tf.keras.utils.to_categorical(
         y_train1, num_classes=len(collectingData), dtype="float32"
